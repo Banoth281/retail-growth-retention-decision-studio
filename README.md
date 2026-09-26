@@ -2,11 +2,21 @@
 
 **Business question:** Which customer and product opportunities should a UK online retailer prioritise?
 
-## View the demo
+## Live demo and scenario calculator
 
-- **[Open the live dashboard](https://banoth281.github.io/retail-growth-retention-decision-studio/)** — a static, historical analysis that needs no account or server.
-- Scroll to **Try a sales scenario** and type your own numbers for customers reached, assumed conversion (%) and average basket (£). The estimate updates immediately. These are hypothetical inputs, separate from the historical dataset; no numbers are submitted or saved.
-- [View the source report](report.html) and [analysis code](analyze.py) in this repository.
+**[Open the interactive sales scenario calculator](https://banoth281.github.io/retail-growth-retention-decision-studio/#scenario)**. It is on the same page as the historical analysis, below the **Decision 3 · Measure the next purchase** table. Open the link in a browser, then change any of the three number fields:
+
+| Field | Meaning | Example |
+| --- | --- | ---: |
+| Customers reached | People included in a hypothetical campaign | 1,000 |
+| Assumed conversion (%) | Percentage expected to place an order | 5 |
+| Average basket (£) | Assumed sales value per converted customer | 50 |
+
+The **Illustrative additional sales** figure updates as you type. With the example values, it is **1,000 × 5% × £50 = £2,500**. Try changing the conversion rate to **10**; the estimate becomes **£5,000**.
+
+This is a *what-if calculation*, not a forecast, observed campaign result, or profit. It excludes campaign costs, returns and margin. The historical KPI cards, charts and cohort table remain based on the UCI dataset; changing these inputs does not change them. Your inputs stay in your browser and are not saved or submitted.
+
+[Open the full dashboard from the top](https://banoth281.github.io/retail-growth-retention-decision-studio/) · [View the generated report source](report.html) · [View the Python analysis](analyze.py)
 
 ![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
 
