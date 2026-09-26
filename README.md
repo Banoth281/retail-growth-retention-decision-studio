@@ -5,6 +5,7 @@
 ## View the demo
 
 - **[Open the live dashboard](https://banoth281.github.io/retail-growth-retention-decision-studio/)** — a static, historical analysis that needs no account or server.
+- Scroll to **Try a sales scenario** and type your own numbers for customers reached, assumed conversion (%) and average basket (£). The estimate updates immediately. These are hypothetical inputs, separate from the historical dataset; no numbers are submitted or saved.
 - [View the source report](report.html) and [analysis code](analyze.py) in this repository.
 
 ![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
