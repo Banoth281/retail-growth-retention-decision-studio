@@ -131,17 +131,33 @@ if (typeof document !== 'undefined') {
   const currencyInput = document.getElementById('currency-code');
   const dateFormatInput = document.getElementById('date-format');
   const numberFormatInput = document.getElementById('number-format');
+  const displayNames = new Intl.DisplayNames([navigator.language || 'en'], {type: 'region'});
+  for (const code of Object.keys(COUNTRY_CURRENCIES)) {
+    const option = document.createElement('option');
+    option.value = code;
+    option.textContent = `${displayNames.of(code)} (${code})`;
+    countryInput.append(option);
+  }
+  const sortedOptions = [...countryInput.options].slice(1).sort((a, b) => a.textContent.localeCompare(b.textContent));
+  countryInput.replaceChildren(countryInput.options[0], ...sortedOptions);
+  const countryName = () => countryInput.value ? countryInput.selectedOptions[0].textContent : 'Country not specified';
   const money = value => new Intl.NumberFormat(currencyInput.value.toUpperCase() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
     {style: 'currency', currency: currencyInput.value.toUpperCase()}).format(value);
   const number = value => new Intl.NumberFormat('en-GB').format(value);
   const marketScope = document.getElementById('market-scope');
   function updateMarketScope() {
-    const country = countryInput.value.trim();
-    marketScope.textContent = country && !/^(uk|united kingdom|great britain|gb)$/i.test(country)
-      ? `This ONS panel describes Great Britain, not ${country}. Your uploaded sales and currency remain separate.`
+    const country = countryInput.value;
+    marketScope.textContent = country && country !== 'GB'
+      ? `This ONS panel describes Great Britain, not ${countryName()}. Your uploaded sales and currency remain separate.`
       : 'This ONS panel describes Great Britain. It is separate from your uploaded sales.';
   }
   countryInput.addEventListener('input', updateMarketScope);
+  countryInput.addEventListener('change', () => {
+    currencyInput.value = COUNTRY_CURRENCIES[countryInput.value] || '';
+    currencyInput.placeholder = currencyInput.value ? '' : 'Enter currency code';
+    currencyInput.dispatchEvent(new Event('input', {bubbles: true}));
+    updateMarketScope();
+  });
   let rows = null, summary = null, sourceLabel = '';
   const guesses = {
     date: ['order_date', 'date', 'invoice_date', 'invoicedate', 'transaction_date'],
@@ -195,7 +211,7 @@ if (typeof document !== 'undefined') {
   });
 
   async function loadSample() {
-    document.querySelector('[data-country-preset="United Kingdom"]').click();
+    countryInput.value = 'GB'; countryInput.dispatchEvent(new Event('change', {bubbles: true}));
     reset();
     setStatus('Loading fictional sample…');
     try {
@@ -208,14 +224,6 @@ if (typeof document !== 'undefined') {
   document.getElementById('load-sample').addEventListener('click', loadSample);
   document.getElementById('hero-sample').addEventListener('click', event => {event.preventDefault(); loadSample();});
 
-  document.querySelectorAll('[data-country-preset]').forEach(button => button.addEventListener('click', () => {
-    countryInput.value = button.dataset.countryPreset;
-    currencyInput.value = button.dataset.currency;
-    dateFormatInput.value = button.dataset.dateFormat;
-    numberFormatInput.value = 'dot';
-    currencyInput.dispatchEvent(new Event('input', {bubbles: true}));
-    updateMarketScope();
-  }));
   for (const input of [countryInput, currencyInput, dateFormatInput, numberFormatInput]) {
     input.addEventListener('input', () => {
       if (summary) {summary = null; output.hidden = true; progress(rows ? 1 : 0);
@@ -225,22 +233,10 @@ if (typeof document !== 'undefined') {
     });
   }
 
-  async function loadIndiaSample() {
-    document.querySelector('[data-country-preset="India"]').click();
-    reset();
-    setStatus('Loading fictional India sample…');
-    try {
-      const response = await fetch('sample_india_sales.csv');
-      if (!response.ok) throw new Error('India sample is unavailable. Download the CSV and choose it instead.');
-      loadText(await response.text(), 'Fictional India sample');
-      mapping.scrollIntoView({behavior: 'smooth', block: 'start'});
-    } catch (error) {reset(); setStatus(error.message, true);}
-  }
-  document.getElementById('load-india-sample').addEventListener('click', loadIndiaSample);
-
   document.getElementById('own-run').addEventListener('click', () => {
     if (!rows) return;
     try {
+      if (!countryInput.value) throw new Error('Choose a country or territory before running the analysis.');
       const currency = currencyInput.value.trim().toUpperCase();
       if (!/^[A-Z]{3}$/.test(currency)) throw new Error('Enter a three-letter currency code such as INR, GBP or USD.');
       try {new Intl.NumberFormat('en', {style:'currency', currency});}
@@ -284,7 +280,7 @@ if (typeof document !== 'undefined') {
       }
       const q = summary.quality;
       document.getElementById('own-quality').textContent = `${number(summary.valid)} positive sale rows used; ${number(q.excluded)} excluded (${number(q.missingOrder)} missing order IDs, ${number(q.invalidDate)} invalid dates, ${number(q.invalidValue)} non-positive or invalid values, ${number(q.wrongColumns)} rows with the wrong column count). ${number(q.repeatedIdenticalRows)} identical-looking rows flagged but retained. ${number(q.unknownCustomer)} valid rows have no customer ID.`;
-      document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${countryInput.value.trim() || 'Country not specified'} · ${currency} · ${number(summary.valid)} usable rows`;
+      document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${countryName()} · ${currency} · ${number(summary.valid)} usable rows`;
       output.hidden = false; document.getElementById('own-export').disabled = false;
       document.getElementById('own-brief').disabled = false;
       progress(2);
@@ -311,7 +307,7 @@ if (typeof document !== 'undefined') {
   document.getElementById('own-brief').addEventListener('click', () => {
     if (!summary) return;
     const q = summary.quality, c = summary.comparison;
-    const lines = ['RETAIL DECISION BRIEF', `Source: ${sourceLabel}`, `Country: ${countryInput.value.trim() || 'Not specified'}`,
+    const lines = ['RETAIL DECISION BRIEF', `Source: ${sourceLabel}`, `Country: ${countryName()}`,
       `Currency: ${currencyInput.value}`, `Positive sales value: ${money(summary.revenue)}`,
       `Distinct orders: ${summary.orders}`, `Average order value: ${money(summary.aov)}`,
       `Identified customer repeat rate: ${summary.repeatRate == null ? 'N/A' : (summary.repeatRate * 100).toFixed(1) + '%'}`,

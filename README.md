@@ -47,3 +47,7 @@ Built by Santhosh Banoth. Source and tests are in this repository.
 Map optional `product` and `region` columns to see the leading groups by positive sales value. The two most recent recorded periods appear together, with a gap warning when months are missing. Download a text decision brief containing aggregate results, data checks and interpretation limits; it contains no raw customer IDs. The [UK sample](sample_sales.csv) and [India sample](sample_india_sales.csv) are fictional and include both optional fields. These examples demonstrate the workflow, not current market sales.
 
 All amounts in one file are assumed to share the currency selected in the interface. The tool labels values but does not convert currencies or reconcile refunds. Period comparisons use only supplied rows; a partial month can mislead.
+
+### Country and currency selector
+
+The workspace lists the 249 ISO 3166-1 countries and territories (using tzdata's ISO country list). It suggests a tender currency for each from Unicode CLDR 48 currency data; some places have multiple tender currencies, so the currency remains editable. Antarctica has no suggested currency. The selected currency labels amounts in one file; it does not convert them. The Great Britain ONS panel remains a separate market example regardless of the selected country.
