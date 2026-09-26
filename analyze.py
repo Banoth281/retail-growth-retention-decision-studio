@@ -87,7 +87,18 @@ def compute(raw):
     return metrics, months, products, cohort, sales
 
 
-def render(metrics, months, products, cohort):
+def market_summary(sales):
+    """Additive invoice-line value by country and month for the explorer."""
+    grouped = (sales.assign(Country=sales['Country'].fillna('Unknown'))
+               .groupby(['Country', 'month'], dropna=False)
+               .agg(revenue=('revenue', 'sum'), lines=('InvoiceNo', 'size'))
+               .reset_index().sort_values(['Country', 'month']))
+    return [{'country': str(row.Country), 'month': str(row.month),
+             'revenue': round(float(row.revenue), 2), 'lines': int(row.lines)}
+            for row in grouped.itertuples(index=False)]
+
+
+def render(metrics, months, products, cohort, sales):
     from html import escape
     OUTPUT.mkdir(exist_ok=True)
     plt.rcParams.update({'font.family':'DejaVu Sans','figure.facecolor':'#101a2a','axes.facecolor':'#101a2a',
@@ -102,17 +113,63 @@ def render(metrics, months, products, cohort):
     ax.set_xlabel('Distinct valid invoices');ax.spines[['top','right']].set_visible(False)
     fig.tight_layout();fig.savefig(OUTPUT/'top_products.png',dpi=150);plt.close(fig)
     rows=''.join(f"<tr><td>{escape(str(r.cohort))}</td><td>{r.customers:,}</td><td>{r.month_1_customers:,}</td><td>{r.month_1_rate:.1%}</td></tr>" for r in cohort.itertuples())
+    market_json = json.dumps(market_summary(sales), ensure_ascii=True).replace('<', '\\u003c')
     report=f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Retail Growth & Retention Decision Studio</title><style>
 body{{background:#0c1422;color:#eaf2fb;font:16px system-ui;max-width:1100px;margin:32px auto;padding:0 20px}}h1{{font-size:38px}}p,small{{color:#b9c9dc;line-height:1.6}}a{{color:#54ddc1}}.cards{{display:flex;flex-wrap:wrap;gap:14px}}.card,section{{background:#172439;border:1px solid #30435c;border-radius:12px;padding:20px;margin:18px 0}}.card{{min-width:190px;flex:1}}.value{{font-size:30px;color:#54ddc1;font-weight:700}}img{{width:100%;height:auto}}table{{border-collapse:collapse;width:100%}}th,td{{padding:10px;border-bottom:1px solid #30435c;text-align:left}}th{{color:#54ddc1}}.note{{border-left:4px solid #f3be67;padding-left:14px}}
 label{{display:block;margin:12px 0}}input{{display:block;margin-top:5px;padding:9px;background:#0c1422;color:#eaf2fb;border:1px solid #54708d;border-radius:5px;width:160px;max-width:100%;font:inherit}}.estimate{{font-size:28px;color:#54ddc1;font-weight:700}}
+select,button{{display:block;margin-top:5px;padding:9px;background:#0c1422;color:#eaf2fb;border:1px solid #54708d;border-radius:5px;font:inherit}}button{{cursor:pointer}}.bars{{display:grid;gap:8px}}.barrow{{display:grid;grid-template-columns:80px 1fr 120px;gap:9px;align-items:center}}.bartrack{{height:16px;background:#30435c;border-radius:4px}}.barfill{{height:100%;background:#54ddc1;border-radius:4px}}.barvalue{{text-align:right}}@media(max-width:550px){{.barrow{{grid-template-columns:65px 1fr 95px;font-size:13px}}}}
 </style></head><body><h1>Retail Growth & Retention</h1><p>Decision studio · historical UK online retail transactions · Dec 2010–Dec 2011</p>
 <div class="cards"><div class="card">Valid sales revenue<div class="value">£{metrics['revenue_gbp']:,.0f}</div></div><div class="card">Valid invoices<div class="value">{metrics['valid_invoices']:,}</div></div><div class="card">Identified customers<div class="value">{metrics['identified_customers']:,}</div></div><div class="card">Repeat customers<div class="value">{metrics['repeat_customer_rate']:.1%}</div></div></div>
+<section id="explorer"><h2>Explore markets</h2><p>Filter actual valid sale lines by country and month. These are recorded positive invoice-line values, including some charges; they are not profit. A sale line is not an order. Country is the transaction's recorded country.</p><div class="cards"><label>Country<select id="market-country"></select></label><label>Month<select id="market-month"></select></label></div><div class="cards"><div class="card">Filtered sales value<div id="market-revenue" class="value"></div></div><div class="card">Valid sale lines<div id="market-lines" class="value"></div></div><div class="card">Share of all valid sales<div id="market-share" class="value"></div></div></div><p id="market-description"></p><div id="market-bars" class="bars" role="img" aria-label="Monthly sales value for selected country"></div><p><button id="market-export" type="button">Download filtered CSV</button></p><small>Monthly chart uses January–November 2011 for comparable full months. Filtered KPIs include December 2010 and partial December 2011 when All months is selected. CSV contains aggregated country-month rows, not customer records.</small></section>
 <section><h2>Decision 1 · Plan for the monthly pattern</h2><p>Valid sales by invoice month, January–November 2011. The partial December 2011 month is excluded.</p><img src="outputs/monthly_revenue.png" alt="Monthly revenue trend"></section>
 <section><h2>Decision 2 · Review recurring product demand</h2><p>Top products by distinct invoices across the full observed period. Postage and manual charge codes are excluded from this ranking. Frequency avoids treating one unusually large order as broad demand. A restock decision also needs stock, costs and margin data.</p><img src="outputs/top_products.png" alt="Top products by distinct invoice count"></section>
 <section><h2>Decision 3 · Measure the next purchase</h2><p>Month 1 retention by first observed purchase month. Cohorts through October 2011 have at least one subsequent calendar month available.</p><table><thead><tr><th>First observed month</th><th>Customers</th><th>Returned next month</th><th>Retention</th></tr></thead><tbody>{rows}</tbody></table></section>
 <section id="scenario"><h2>Try a sales scenario</h2><p>Enter assumptions to estimate additional sales from a customer campaign. This is an illustrative calculation, not a prediction or a change to the historical KPIs.</p><div class="cards"><label>Customers reached<input id="reached" type="number" min="0" max="10000000" step="1" value="1000"></label><label>Assumed conversion (%)<input id="conversion" type="number" min="0" max="100" step="0.1" value="5"></label><label>Average basket (£)<input id="basket" type="number" min="0" max="1000000" step="0.01" value="50"></label></div><p>Illustrative additional sales: <output id="estimate" class="estimate" aria-live="polite">£2,500.00</output></p><small>Formula: customers reached × conversion ÷ 100 × average basket. Excludes campaign costs, returns and margins; it is not profit. Your entries remain in your browser.</small></section>
 <section><h2>Data quality and interpretation</h2><p>{metrics['source_rows']:,} source lines; {metrics['valid_sale_lines']:,} valid sales lines; {metrics['excluded_lines']:,} excluded lines, including {metrics['cancel_lines']:,} cancellation or negative-quantity lines. {metrics['unknown_customer_sale_lines']:,} valid sales lines lack customer IDs and are excluded from customer metrics.</p><p class="note">The headline is positive invoice-line value and may include charges such as postage; it is not profit. Cancellation lines are not a refund rate. The data ends 9 December 2011 and does not describe today's market.</p><p>Source: Chen, D. (2015), <a href="https://archive.ics.uci.edu/dataset/352/online+retail">Online Retail, UCI Machine Learning Repository</a>, <a href="https://doi.org/10.24432/C5BW33">DOI 10.24432/C5BW33</a>, CC BY 4.0. All calculations are reproducible with <code>python analyze.py</code>; see README for metric definitions and SQL for review.</p></section></body></html>'''
-    report=report.replace('</body></html>', '''<script>
+    report=report.replace('</body></html>', '''<script id="market-data" type="application/json">''' + market_json + '''</script><script>
+const markets = JSON.parse(document.getElementById('market-data').textContent);
+const countrySelect = document.getElementById('market-country');
+const monthSelect = document.getElementById('market-month');
+const gbp = value => new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'}).format(value);
+const number = value => new Intl.NumberFormat('en-GB').format(value);
+function addOption(select, value, label) { const item = document.createElement('option'); item.value = value; item.textContent = label; select.append(item); }
+addOption(countrySelect, '', 'All countries');
+[...new Set(markets.map(row => row.country))].sort().forEach(country => addOption(countrySelect, country, country));
+addOption(monthSelect, '', 'All months');
+[...new Set(markets.map(row => row.month))].sort().forEach(month => addOption(monthSelect, month, month));
+let selectedRows = [];
+function updateMarket() {
+  selectedRows = markets.filter(row => (!countrySelect.value || row.country === countrySelect.value) && (!monthSelect.value || row.month === monthSelect.value));
+  const sales = selectedRows.reduce((sum, row) => sum + row.revenue, 0);
+  const lines = selectedRows.reduce((sum, row) => sum + row.lines, 0);
+  const allSales = markets.reduce((sum, row) => sum + row.revenue, 0);
+  document.getElementById('market-revenue').textContent = gbp(sales);
+  document.getElementById('market-lines').textContent = number(lines);
+  document.getElementById('market-share').textContent = (sales / allSales * 100).toFixed(1) + '%';
+  const description = (countrySelect.value || 'All countries') + ' · ' + (monthSelect.value || 'All months');
+  document.getElementById('market-description').textContent = description + ' · ' + selectedRows.length + ' country-month groups';
+  const byMonth = new Map();
+  selectedRows.filter(row => row.month >= '2011-01' && row.month <= '2011-11').forEach(row => byMonth.set(row.month, (byMonth.get(row.month) || 0) + row.revenue));
+  const bars = document.getElementById('market-bars'); bars.replaceChildren();
+  const max = Math.max(0, ...byMonth.values());
+  for (const [month, value] of [...byMonth].sort((a,b) => a[0].localeCompare(b[0]))) {
+    const row = document.createElement('div'); row.className = 'barrow';
+    const date = document.createElement('span'); date.textContent = month;
+    const track = document.createElement('div'); track.className = 'bartrack';
+    const fill = document.createElement('div'); fill.className = 'barfill'; fill.style.width = (max ? value/max*100 : 0) + '%'; track.append(fill);
+    const label = document.createElement('span'); label.className = 'barvalue'; label.textContent = gbp(value);
+    row.append(date, track, label); bars.append(row);
+  }
+  bars.setAttribute('aria-label', 'Monthly valid sales value, ' + description + (byMonth.size ? '' : '; no full 2011 months selected'));
+}
+countrySelect.addEventListener('change', updateMarket);
+monthSelect.addEventListener('change', updateMarket);
+document.getElementById('market-export').addEventListener('click', () => {
+  const csv = ['country,month,revenue_gbp,valid_sale_lines', ...selectedRows.map(row => [row.country, row.month, row.revenue.toFixed(2), row.lines].map(value => '"' + String(value).replaceAll('"', '""') + '"').join(','))].join('\\r\\n');
+  const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  link.href = url; link.download = 'retail-market-summary.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+updateMarket();
 const fields = ['reached', 'conversion', 'basket'].map(id => document.getElementById(id));
 const estimate = document.getElementById('estimate');
 function calculate() {
@@ -132,7 +189,7 @@ calculate();
 def main():
     raw=load_source()
     metrics,months,products,cohort,sales=compute(raw)
-    render(metrics,months,products,cohort)
+    render(metrics,months,products,cohort,sales)
     (OUTPUT/'metrics.json').write_text(json.dumps(metrics,indent=2),encoding='utf-8')
     with sqlite3.connect(OUTPUT/'retail.db') as db:
         sales[['InvoiceNo','InvoiceDate','StockCode','Description','Quantity','UnitPrice','CustomerID','Country','revenue','month']].to_sql('valid_sales',db,if_exists='replace',index=False)
