@@ -22,6 +22,27 @@ This is a *what-if calculation*, not a forecast, observed campaign result, or pr
 
 This portfolio project analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
 
+## Current UK retail market context (2026)
+
+[Open the ONS market context panel](https://banoth281.github.io/retail-growth-retention-decision-studio/#current-market). It uses the Office for National Statistics (ONS) [Retail Sales Index internet sales workbook](https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsalesindexinternetsales), released **18 September 2026**, with monthly observations through **August 2026**.
+
+- **28.8%** of Great Britain's retail sales excluding automotive fuel were made online in August 2026 (seasonally adjusted, ONS series **MS6Y**).
+- **£2,827.9 million** was the seasonally adjusted **average weekly** online sales value in August 2026 (ONS series **MZX6**). This is not monthly revenue.
+- The panel plots the monthly online share for 2026. The source includes 2025 and 2026 observations in [`outputs/ons_market.json`](outputs/ons_market.json).
+
+**Interpretation:** These are *national market indicators*, not transactions from the retailer in the UCI case study. Do not add the ONS amount to that retailer's revenue or treat the UK market trend as its growth. ONS may revise past values in later releases. The case study's customer retention and product findings remain historical.
+
+To refresh the ONS panel after a new official release, run this in the project folder:
+
+```powershell
+python ons_context.py
+python analyze.py
+Copy-Item report.html index.html
+python -m unittest discover -s tests -v
+```
+
+[`ons_context.py`](ons_context.py) downloads the current official workbook, reads the two named series by their ONS IDs, checks month alignment and writes the small JSON summary. Review the output and commit `outputs/ons_market.json`, `report.html` and `index.html` to publish an updated static demo. The test fixture checks that a later revision table cannot overwrite the main series.
+
 ## Explore markets with real data
 
 [Open the interactive market explorer](https://banoth281.github.io/retail-growth-retention-decision-studio/#explorer) near the top of the dashboard:
@@ -41,7 +62,9 @@ Open a PowerShell terminal in the repository folder:
 
 ```powershell
 python -m pip install -r requirements.txt
+python ons_context.py
 python analyze.py
+Copy-Item report.html index.html
 python -m unittest discover -s tests -v
 start report.html
 ```
