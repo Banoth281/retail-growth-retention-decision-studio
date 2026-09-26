@@ -4,8 +4,8 @@
 
 ## View the demo
 
-- [Open the report in this repository](report.html) to inspect the source HTML.
-- **Live dashboard:** GitHub Pages can serve [`index.html`](index.html) and the charts from this repository. To enable it, open **Settings → Pages**, choose **Deploy from a branch**, select **main** and **/(root)**, then click **Save**. After GitHub publishes it, the demo URL appears in Pages settings. The page is a static, historical analysis; it does not need a server or account.
+- **[Open the live dashboard](https://banoth281.github.io/retail-growth-retention-decision-studio/)** — a static, historical analysis that needs no account or server.
+- [View the source report](report.html) and [analysis code](analyze.py) in this repository.
 
 ![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
 
