@@ -1,60 +1,42 @@
-# Retail Growth & Retention Decision Studio
+# Retail Decision Studio
 
-**A usable retail analysis tool and a reproducible case study.** Analyse your own sales export in the browser, review data quality and monthly sales, then carry your average order value into a campaign planning scenario.
+A browser based product for analysing your own recent retail sales and understanding the latest **published** Great Britain online retail market statistics.
 
-## View the demo
+## Try the live product
 
-- **[Open the live product](https://banoth281.github.io/retail-growth-retention-decision-studio/)** — no account is needed.
-- Click **Explore fictional sample**, confirm the automatically matched columns, and select **Analyse sales**. The sample has 12 positive sale rows, £527.79 sales value and 12 distinct orders. You can also [download the sample CSV](sample_sales.csv) and inspect its columns.
-- To use your own file, choose a UTF-8 comma-separated CSV (up to 5 MB and 100,000 data rows). Supply an order date (`YYYY-MM-DD` or UK `DD/MM/YYYY`), order ID and positive sales value. A customer ID is optional. Map the columns and review the resulting sales summary, monthly chart and validation counts. Download an aggregated monthly summary if useful.
-- Select **Use my order value in planner** to carry the calculated average order value to the campaign planner. Set your own reach, conversion, gross margin and spend assumptions; the planner reports a scenario, not a forecast or observed campaign result.
-- Selected files are read by JavaScript in your browser tab and are not uploaded to this static site. The sample, the 2010–11 UCI case study and ONS market context are separate from your file.
-- The **2026 market** panel near the top uses the ONS Retail Sales Index internet sales series for Great Britain. The latest displayed month is August 2026, released on 18 September 2026. It shows national online share and average weekly online sales, with explicit units and source. Run `python ons_context.py` after a future ONS release, then `python analyze.py`, and republish the generated `report.html` as `index.html`. It does not update automatically between releases.
-- The 2011 monthly values under **Historical explorer** and **Case study** are the UCI retailer's transactions. They cannot be extended into 2026 without another retailer's actual transaction data. Your own current CSV can show its own recent months without mixing these sources.
-- [View the source report](report.html) and [analysis code](analyze.py) in this repository.
+[Open Retail Decision Studio](https://banoth281.github.io/retail-growth-retention-decision-studio/).
 
-![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
+1. Click **Explore fictional sample** to see a worked example. It contains 12 fictional 2026 orders, £527.79 in positive sales value, and a £43.98 average order value.
+2. Confirm the matched order date, order ID, sales value and optional customer ID columns. Click **Analyse sales** to review monthly totals, order metrics, repeat customers and data checks.
+3. Click **Use my order value in planner** to carry the calculated average order value into a campaign scenario. Reach, conversion, margin and spend remain assumptions that you can change.
+4. To analyse your own recent months, choose a UTF-8 comma-separated CSV (up to 5 MB and 100,000 rows). Dates can be `YYYY-MM-DD` or UK `DD/MM/YYYY`; value must be positive. [Download the fictional sample format](sample_sales.csv).
 
-The case study analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
+The selected CSV is processed by JavaScript within the browser tab; it is not uploaded to this static site. The downloadable monthly summary contains aggregates. Avoid using a shared computer for sensitive files.
 
-## Get the data and run locally (Windows, Python 3.10+)
+## Current market context
 
-The dataset is [Online Retail at UCI](https://archive.ics.uci.edu/dataset/352/online+retail). You can [download the source ZIP directly](https://archive.ics.uci.edu/static/public/352/online+retail.zip), extract `Online Retail.xlsx`, and put it in a `data` folder next to `analyze.py`. **You can also skip this download:** `python analyze.py` fetches and saves the workbook automatically on first run.
+The market panel uses the [ONS Retail Sales Index internet sales dataset](https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsalesindexinternetsales), series **MS6Y** (seasonally adjusted online share of GB retail excluding fuel) and **MZX6** (average weekly online sales in £ millions). The latest month in the committed data is **August 2026**, released **18 September 2026**. The ONS may revise observations. National measures are kept separate from a visitor's sales file and the hypothetical campaign planner.
 
-Open a PowerShell terminal in the repository folder:
+This site is static, so it does **not** fetch new ONS data automatically. After a new release, update and build it with Python 3.10+:
 
 ```powershell
 python -m pip install -r requirements.txt
-python analyze.py
+python ons_context.py
+python build_site.py
 python -m unittest discover -s tests -v
-start report.html
+node --test tests/campaign.test.js tests/your_data.test.js
 ```
 
-The source workbook is not committed to GitHub. The first run downloads about 24 MB; later runs reuse `data/Online Retail.xlsx`. The script writes `report.html`, `outputs/metrics.json`, and `outputs/retail.db`. The separate downloadable project ZIP includes the workbook for offline analysis.
+`ons_context.py` downloads the current ONS workbook and extracts the two series into `outputs/ons_market.json`; `build_site.py` generates `index.html` and `report.html` from `site_template.html`. Review the new month and release date before publishing. GitHub Pages serves `index.html`; GitHub Actions runs the Python and JavaScript tests on pushes.
 
-## What the analysis found
+For a local preview, use `python -m http.server 8000` and visit `http://localhost:8000/`. Opening `index.html` as a `file://` page may prevent the one-click sample from loading because browsers restrict local fetches.
 
-| Measure | Result | Interpretation |
-| --- | ---: | --- |
-| Valid invoices | 19,960 | Positive-quantity, positive-price, non-cancellation invoices |
-| Identified customers | 4,338 | Customers with an ID on a valid sale |
-| Repeat customer rate | 65.6% | At least two distinct valid invoices in the observed period |
-| Recorded positive line value | £10.67m | Includes some charge lines; **not profit** |
+## Definitions and limits
 
-![Most frequently purchased products by distinct invoice count](outputs/top_products.png)
+- **Positive sales value:** sum of valid positive CSV values; not profit or net revenue after refunds.
+- **Distinct orders:** count of unique valid order IDs. Multiple valid lines from one order contribute to sales value but count as one order.
+- **Repeat customer rate:** identified customer IDs with at least two distinct valid order IDs divided by all identified customers. Unknown IDs are excluded.
+- **Data quality:** invalid dates, missing order IDs, non-positive values and malformed rows are excluded and counted. Identical-looking rows are flagged but retained because they may be legitimate separate line items.
+- **Campaign planner:** contribution after spend = expected extra sales × gross margin − campaign spend. It excludes returns, VAT, fulfilment and overhead. Results are illustrative assumptions, not forecasts.
 
-## Definitions and decisions
-
-* **Valid sales:** invoice does not start with `C`; positive quantity and unit price. Recorded sales value = quantity × unit price. Some invoice lines are charges such as postage; the headline may include these and is **not profit**.
-* **Cancellations:** count lines with invoice starting `C` or negative quantity separately. This is an operational signal, **not a true refund rate**: original purchases and cancellation lines are not linked reliably here.
-* **Customer repeat rate:** customers with at least two distinct valid invoices divided by identified customers. Guest/unknown IDs are excluded.
-* **Cohort retention:** customers whose first observed purchase was in a given month and who returned in a later month, divided by cohort size. This is observed-period retention, not lifetime retention; the early data may also include existing customers.
-* **Product ranking:** distinct valid invoice count, excluding known postage/manual charge codes. It measures breadth of observed demand rather than profit or stock requirements.
-
-The December 2011 source is partial, ending 9 December. The monthly revenue chart excludes it and uses January–November 2011; cohort month 1 uses cohorts from December 2010 through October 2011 so a subsequent month is observable.
-
-## Evidence for recruiters
-
-The report includes a source and methods panel, KPI cards, monthly trend, product ranking and cohort retention table. The SQLite database supports ad hoc SQL review. `sql/analysis.sql` supplies reconciliation and segment queries. The tests check revenue filtering, cancellation handling and cohort denominators on a deliberately small fixture.
-
-This is a browser based decision tool and an analysis case study, not a live shop. `python -m unittest discover -s tests -v` and `node --test tests/campaign.test.js tests/your_data.test.js` cover the analysis and calculators; GitHub Actions runs both on pushes.
+Built by Santhosh Banoth. Source and tests are in this repository.

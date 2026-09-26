@@ -1,5 +1,5 @@
-data/
-outputs/retail.db
 __pycache__/
 *.py[cod]
 .venv/
+data/
+*.zip

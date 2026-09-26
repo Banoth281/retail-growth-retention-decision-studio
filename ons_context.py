@@ -1,7 +1,6 @@
 """Refresh official GB online retail context from the ONS internet sales workbook.
 
-Run ``python ons_context.py`` after a new ONS release, then ``python analyze.py``.
-Historical UCI retailer records are not modified.
+Run ``python ons_context.py`` after a new ONS release, then ``python build_site.py``.
 """
 import json
 import re
