@@ -2,9 +2,20 @@
 
 **Business question:** Which customer and product opportunities should a UK online retailer prioritise?
 
+## View the demo
+
+- [Open the report in this repository](report.html) to inspect the source HTML.
+- **Live dashboard:** GitHub Pages can serve [`index.html`](index.html) and the charts from this repository. To enable it, open **Settings → Pages**, choose **Deploy from a branch**, select **main** and **/(root)**, then click **Save**. After GitHub publishes it, the demo URL appears in Pages settings. The page is a static, historical analysis; it does not need a server or account.
+
+![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
+
 This portfolio project analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
 
-## Run on Windows (Python 3.10+)
+## Get the data and run locally (Windows, Python 3.10+)
+
+The dataset is [Online Retail at UCI](https://archive.ics.uci.edu/dataset/352/online+retail). You can [download the source ZIP directly](https://archive.ics.uci.edu/static/public/352/online+retail.zip), extract `Online Retail.xlsx`, and put it in a `data` folder next to `analyze.py`. **You can also skip this download:** `python analyze.py` fetches and saves the workbook automatically on first run.
+
+Open a PowerShell terminal in the repository folder:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -13,7 +24,18 @@ python -m unittest discover -s tests -v
 start report.html
 ```
 
-The source workbook is not committed to GitHub. `analyze.py` downloads it from UCI on first run (about 24 MB), then reuses the local copy. It writes `report.html`, `outputs/metrics.json`, and `outputs/retail.db`. The downloadable project ZIP also includes the workbook for offline analysis.
+The source workbook is not committed to GitHub. The first run downloads about 24 MB; later runs reuse `data/Online Retail.xlsx`. The script writes `report.html`, `outputs/metrics.json`, and `outputs/retail.db`. The separate downloadable project ZIP includes the workbook for offline analysis.
+
+## What the analysis found
+
+| Measure | Result | Interpretation |
+| --- | ---: | --- |
+| Valid invoices | 19,960 | Positive-quantity, positive-price, non-cancellation invoices |
+| Identified customers | 4,338 | Customers with an ID on a valid sale |
+| Repeat customer rate | 65.6% | At least two distinct valid invoices in the observed period |
+| Recorded positive line value | £10.67m | Includes some charge lines; **not profit** |
+
+![Most frequently purchased products by distinct invoice count](outputs/top_products.png)
 
 ## Definitions and decisions
 
