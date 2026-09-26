@@ -140,6 +140,7 @@ if (typeof document !== 'undefined') {
   }
   const sortedOptions = [...countryInput.options].slice(1).sort((a, b) => a.textContent.localeCompare(b.textContent));
   countryInput.replaceChildren(countryInput.options[0], ...sortedOptions);
+  countryInput.value = '';
   const countryName = () => countryInput.value ? countryInput.selectedOptions[0].textContent : 'Country not specified';
   const money = value => new Intl.NumberFormat(currencyInput.value.toUpperCase() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
     {style: 'currency', currency: currencyInput.value.toUpperCase()}).format(value);
