@@ -21,6 +21,12 @@ class BuildSiteTests(unittest.TestCase):
         self.assertIn('18 September 2026', html)
         self.assertIn('2026-07', html)
         self.assertNotIn('2025-08</span>', html)  # only latest year in monthly chart
+        self.assertIn('id="market-country"', html)
+        self.assertIn('id="market-gb" hidden', html)
+        self.assertIn('id="market-us" hidden', html)
+        self.assertIn('$340.2bn', html)
+        self.assertIn('id="market-in" hidden', html)
+        self.assertIn('network only', html)
 
     def test_requires_ordered_months(self):
         with self.assertRaises(ValueError):

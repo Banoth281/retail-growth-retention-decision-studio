@@ -23,3 +23,5 @@ body{background:radial-gradient(circle at 90% 4%,#1a4453 0,transparent 38rem),ra
 .period-card{border:1px solid #4e8b87;background:#143c46;padding:16px;border-radius:12px;color:#e4f5f4}.breakdown-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin:20px 0}.breakdown-grid>div{background:#102c3b;padding:17px;border:1px solid #3b6370;border-radius:12px}.breakdown-grid table{min-width:0}.breakdown-grid td:last-child{text-align:right;font-variant-numeric:tabular-nums}.breakdown-grid th:last-child{text-align:right}.breakdown-grid td{overflow-wrap:anywhere}
 
 .global-fields #country-name{width:100%;max-width:none}.upload-panel .eyebrow{margin:0 0 8px}.upload-panel .global-fields{margin-top:19px}
+
+.market-picker{width:min(420px,100%);margin:18px 0;font-size:14px}.market-picker select{width:100%;max-width:none}.market-now [id^="market-"] .section-heading h3{font-size:20px}.market-now #market-other,.market-now #market-in{border:1px solid #596f76;border-radius:12px;background:#192f3c;padding:20px}.market-now #market-empty{margin:18px 0}

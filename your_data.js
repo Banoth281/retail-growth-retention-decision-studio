@@ -145,19 +145,10 @@ if (typeof document !== 'undefined') {
   const money = value => new Intl.NumberFormat(currencyInput.value.toUpperCase() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
     {style: 'currency', currency: currencyInput.value.toUpperCase()}).format(value);
   const number = value => new Intl.NumberFormat('en-GB').format(value);
-  const marketScope = document.getElementById('market-scope');
-  function updateMarketScope() {
-    const country = countryInput.value;
-    marketScope.textContent = country && country !== 'GB'
-      ? `This ONS panel describes Great Britain, not ${countryName()}. Your uploaded sales and currency remain separate.`
-      : 'This ONS panel describes Great Britain. It is separate from your uploaded sales.';
-  }
-  countryInput.addEventListener('input', updateMarketScope);
   countryInput.addEventListener('change', () => {
     currencyInput.value = COUNTRY_CURRENCIES[countryInput.value] || '';
     currencyInput.placeholder = currencyInput.value ? '' : 'Enter currency code';
     currencyInput.dispatchEvent(new Event('input', {bubbles: true}));
-    updateMarketScope();
   });
   let rows = null, summary = null, sourceLabel = '';
   const guesses = {
