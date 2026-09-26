@@ -96,7 +96,7 @@ if (typeof document !== 'undefined') {
   const output = document.getElementById('own-results');
   const money = value => new Intl.NumberFormat('en-GB', {style: 'currency', currency: 'GBP'}).format(value);
   const number = value => new Intl.NumberFormat('en-GB').format(value);
-  let rows = null, summary = null;
+  let rows = null, summary = null, sourceLabel = '';
   const guesses = {
     date: ['order_date', 'date', 'invoice_date', 'invoicedate', 'transaction_date'],
     order: ['order_id', 'orderid', 'invoice_no', 'invoiceno', 'invoice', 'transaction_id'],
@@ -105,27 +105,58 @@ if (typeof document !== 'undefined') {
   };
   const normal = text => text.toLowerCase().replace(/[^a-z0-9]/g, '');
   const setStatus = (message, isError = false) => {status.textContent = message; status.classList.toggle('negative', isError);};
-  function reset() {rows = summary = null; mapping.hidden = output.hidden = true; document.getElementById('own-export').disabled = true;}
+  function progress(step) {
+    ['load', 'map', 'review'].forEach((name, index) => {
+      const item = document.getElementById('step-' + name);
+      item.classList.toggle('active', index === step);
+      item.classList.toggle('complete', index < step);
+    });
+  }
+  function reset() {
+    rows = summary = null; sourceLabel = '';
+    mapping.hidden = output.hidden = true;
+    document.getElementById('own-export').disabled = true;
+    progress(0);
+  }
+
+  function loadText(text, label) {
+    const parsed = parseCsv(text);
+    if (parsed.length < 2 || parsed.length > 100001 || parsed[0].length < 3)
+      throw new Error('Use a CSV with a header, at least one row and 3–100,000 data rows.');
+    rows = parsed; sourceLabel = label;
+    for (let i = 0; i < selects.length; i++) {
+      const select = selects[i]; select.replaceChildren();
+      if (i === 3) {const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'No customer ID'; select.append(blank);}
+      rows[0].forEach((name, index) => {const option = document.createElement('option'); option.value = String(index); option.textContent = name || '(unnamed column ' + (index + 1) + ')'; select.append(option);});
+      const match = rows[0].findIndex(header => guesses[['date','order','value','customer'][i]].some(guess => normal(header) === normal(guess)));
+      select.value = match >= 0 ? String(match) : (i === 3 ? '' : String(Math.min(i, rows[0].length - 1)));
+    }
+    mapping.hidden = false;
+    progress(1);
+    setStatus(`${label}: ${number(rows.length - 1)} data rows loaded. Confirm the column mapping, then run the analysis.`);
+  }
 
   fileInput.addEventListener('change', async () => {
     reset();
     const file = fileInput.files[0];
     if (!file) { setStatus('Choose a CSV to begin.'); return; }
     if (file.size > 5 * 1024 * 1024) { setStatus('Choose a CSV smaller than 5 MB.', true); return; }
-    try {
-      rows = parseCsv(await file.text());
-      if (rows.length < 2 || rows.length > 100001 || rows[0].length < 3) throw new Error('Use a CSV with a header, at least one row and 3–100,000 data rows.');
-      for (let i = 0; i < selects.length; i++) {
-        const select = selects[i]; select.replaceChildren();
-        if (i === 3) {const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'No customer ID'; select.append(blank);}
-        rows[0].forEach((name, index) => {const option = document.createElement('option'); option.value = String(index); option.textContent = name || '(unnamed column ' + (index + 1) + ')'; select.append(option);});
-        const match = rows[0].findIndex(header => guesses[['date','order','value','customer'][i]].some(guess => normal(header) === normal(guess)));
-        select.value = match >= 0 ? String(match) : (i === 3 ? '' : String(Math.min(i, rows[0].length - 1)));
-      }
-      mapping.hidden = false;
-      setStatus(`Loaded ${number(rows.length - 1)} data rows. Confirm the column mapping, then run the analysis.`);
-    } catch (error) {reset(); setStatus(error.message, true);}
+    try { loadText(await file.text(), file.name); }
+    catch (error) {reset(); setStatus(error.message, true);}
   });
+
+  async function loadSample() {
+    reset();
+    setStatus('Loading fictional sample…');
+    try {
+      const response = await fetch('sample_sales.csv');
+      if (!response.ok) throw new Error('Sample file is unavailable. Download it and choose the CSV instead.');
+      loadText(await response.text(), 'Fictional sample');
+      mapping.scrollIntoView({behavior: 'smooth', block: 'start'});
+    } catch (error) {reset(); setStatus(error.message, true);}
+  }
+  document.getElementById('load-sample').addEventListener('click', loadSample);
+  document.getElementById('hero-sample').addEventListener('click', event => {event.preventDefault(); loadSample();});
 
   document.getElementById('own-run').addEventListener('click', () => {
     if (!rows) return;
@@ -150,9 +181,20 @@ if (typeof document !== 'undefined') {
       document.getElementById('own-insight').textContent = `Highest recorded sales month: ${peak.month} (${money(peak.value)}). Review what drove that month before planning a campaign.`;
       const q = summary.quality;
       document.getElementById('own-quality').textContent = `${number(summary.valid)} positive sale rows used; ${number(q.excluded)} excluded (${number(q.missingOrder)} missing order IDs, ${number(q.invalidDate)} invalid dates, ${number(q.invalidValue)} non-positive or invalid values, ${number(q.wrongColumns)} rows with the wrong column count). ${number(q.repeatedIdenticalRows)} identical-looking rows flagged but retained. ${number(q.unknownCustomer)} valid rows have no customer ID.`;
+      document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${number(summary.valid)} usable rows`;
       output.hidden = false; document.getElementById('own-export').disabled = false;
+      progress(2);
       setStatus('Analysis complete. Only summary figures are displayed; your file remains in this browser tab.');
-    } catch (error) {summary = null; output.hidden = true; setStatus(error.message, true);}
+      output.scrollIntoView({behavior: 'smooth', block: 'start'});
+    } catch (error) {summary = null; output.hidden = true; progress(1); setStatus(error.message, true);}
+  });
+
+  document.getElementById('use-my-aov').addEventListener('click', () => {
+    if (!summary) return;
+    document.getElementById('basket').value = summary.aov.toFixed(2);
+    document.getElementById('basket').dispatchEvent(new Event('input', {bubbles: true}));
+    document.getElementById('scenario').scrollIntoView({behavior: 'smooth', block: 'start'});
+    document.getElementById('basket').focus({preventScroll: true});
   });
 
   document.getElementById('own-export').addEventListener('click', () => {

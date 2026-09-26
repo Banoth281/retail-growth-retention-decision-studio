@@ -1,101 +1,19 @@
 # Retail Growth & Retention Decision Studio
 
-**Business question:** Which customer and product opportunities should a UK online retailer prioritise?
+**A usable retail analysis tool and a reproducible case study.** Analyse your own sales export in the browser, review data quality and monthly sales, then carry your average order value into a campaign planning scenario.
 
-## Use the website
+## View the demo
 
-**[Open the live retail campaign planner](https://banoth281.github.io/retail-growth-retention-decision-studio/#scenario)**. This is a small business decision tool on the public site, followed by the historical case study and current ONS market context.
-
-Enter your own assumptions:
-
-| Input | Example | Meaning |
-| --- | ---: | --- |
-| Customers reached | 1,000 | Distinct people who receive the campaign |
-| Expected conversion | 5% | Share expected to place one additional order |
-| Average order value | £50 | Value per additional order |
-| Gross margin | 40% | Share left after cost of goods, before campaign spend |
-| Campaign spend | £500 | Incremental marketing cost |
-
-With the example, the planner estimates **50 extra orders**, **£2,500 incremental sales**, **£500 contribution after campaign spend**, and **2.5% break-even conversion**. A sensitivity table shows how lower and higher conversion assumptions change the outcome. Click **Download scenario CSV** to save your own assumptions and results.
-
-Formulas:
-
-```text
-Expected extra orders = customers reached × conversion rate
-Incremental sales = expected extra orders × average order value
-Contribution after spend = incremental sales × gross margin rate − campaign spend
-Break-even conversion rate = campaign spend ÷ (customers reached × average order value × gross margin rate)
-```
-
-**Limits:** This is a scenario, not a forecast, net profit figure or measured campaign outcome. Returns, VAT, fulfilment and overhead are excluded. The break-even result says “Not reachable” if positive spend cannot be covered under the inputs. Your numbers run in your browser and are not sent to a server. The UCI and ONS datasets do **not** set the default assumptions.
-
-[Open the market explorer](https://banoth281.github.io/retail-growth-retention-decision-studio/#explorer) · [View the generated report](report.html) · [View the Python analysis](analyze.py) · [View planner code](campaign.js)
+- **[Open the live product](https://banoth281.github.io/retail-growth-retention-decision-studio/)** — no account is needed.
+- Click **Explore fictional sample**, confirm the automatically matched columns, and select **Analyse sales**. The sample has 12 positive sale rows, £527.79 sales value and 12 distinct orders. You can also [download the sample CSV](sample_sales.csv) and inspect its columns.
+- To use your own file, choose a UTF-8 comma-separated CSV (up to 5 MB and 100,000 data rows). Supply an order date (`YYYY-MM-DD` or UK `DD/MM/YYYY`), order ID and positive sales value. A customer ID is optional. Map the columns and review the resulting sales summary, monthly chart and validation counts. Download an aggregated monthly summary if useful.
+- Select **Use my order value in planner** to carry the calculated average order value to the campaign planner. Set your own reach, conversion, gross margin and spend assumptions; the planner reports a scenario, not a forecast or observed campaign result.
+- Selected files are read by JavaScript in your browser tab and are not uploaded to this static site. The sample, the 2010–11 UCI case study and ONS market context are separate from your file.
+- [View the source report](report.html) and [analysis code](analyze.py) in this repository.
 
 ![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
 
-This portfolio project analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
-
-## Analyse your own sales CSV
-
-**[Open the browser-only sales analyser](https://banoth281.github.io/retail-growth-retention-decision-studio/#your-data).** To try it without preparing a file, [download the fictional sample](sample_sales.csv) and select it on the website. The sample is synthetic and is **not** the UCI or ONS source.
-
-For your own export, use a comma-separated UTF-8 CSV with a header and these fields (the names can differ; the site lets you map them):
-
-| Required? | Field | Example | Notes |
-| --- | --- | --- | --- |
-| Yes | Order date | `2026-03-15` or `15/03/2026` | ISO or UK day/month/year |
-| Yes | Order ID | `INV-123` | Repeated IDs across product lines count as one order |
-| Yes | Positive sales value | `47.50` | Can be an order total or one line value; do **not** repeat a whole order total on every line |
-| Optional | Customer ID | `C004` | Enables identified-customer repeat rate |
-
-Choose a file **under 5 MB, up to 100,000 data rows**, confirm the four column mappings, then click **Analyse this CSV**. You get positive sales value, distinct orders, average order value, month-by-month sales, repeat rate when customer IDs are available, a highest-month prompt and a quality summary. **Download monthly summary CSV** exports only aggregated month and sales value.
-
-The file is read in your browser tab by [`your_data.js`](your_data.js). The site does not upload it or combine it with the historical case study. Closing or refreshing the tab clears the selected file and results. Avoid using sensitive files on a shared device. Invalid dates, missing order IDs and non-positive or invalid values are excluded with counts; identical-looking rows are flagged **but kept** because separate line items can legitimately match. The tool does not reconcile refunds, tax or profit, and repeat rate excludes rows without a customer ID. The [JavaScript tests](tests/your_data.test.js) cover CSV quoting, date formats, line-level order totals, repeat rate and validation.
-
-## Website walkthrough
-
-The [live case study](https://banoth281.github.io/retail-growth-retention-decision-studio/) is designed for a quick recruiter review:
-
-1. **Analyse your own sales CSV** with local file selection and column mapping, or use the fictional sample.
-2. Use the **Campaign planner** to test assumptions and break-even conversion.
-3. Use **Market explorer** to filter the 2010–11 retailer's valid transaction lines and export aggregated CSV.
-4. Read **Case study** for monthly patterns, invoice-level product demand and cohort retention.
-5. Use **2026 context** for the separately sourced ONS market series.
-6. Open **Methods** for exclusions, limitations and source links.
-
-The site works on desktop and mobile, with keyboard navigation and readable table scrolling. The HTML is generated by [`analyze.py`](analyze.py), uses [`style.css`](style.css), and is published through GitHub Pages from [`index.html`](index.html). The own-data analyser and planner are browser tools, and the accompanying analysis is a portfolio case study; no campaign outcome or employer result is claimed.
-
-## Current UK retail market context (2026)
-
-[Open the ONS market context panel](https://banoth281.github.io/retail-growth-retention-decision-studio/#current-market). It uses the Office for National Statistics (ONS) [Retail Sales Index internet sales workbook](https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsalesindexinternetsales), released **18 September 2026**, with monthly observations through **August 2026**.
-
-- **28.8%** of Great Britain's retail sales excluding automotive fuel were made online in August 2026 (seasonally adjusted, ONS series **MS6Y**).
-- **£2,827.9 million** was the seasonally adjusted **average weekly** online sales value in August 2026 (ONS series **MZX6**). This is not monthly revenue.
-- The panel plots the monthly online share for 2026. The source includes 2025 and 2026 observations in [`outputs/ons_market.json`](outputs/ons_market.json).
-
-**Interpretation:** These are *national market indicators*, not transactions from the retailer in the UCI case study. Do not add the ONS amount to that retailer's revenue or treat the UK market trend as its growth. ONS may revise past values in later releases. The case study's customer retention and product findings remain historical.
-
-To refresh the ONS panel after a new official release, run this in the project folder:
-
-```powershell
-python ons_context.py
-python analyze.py
-Copy-Item report.html index.html
-python -m unittest discover -s tests -v
-```
-
-[`ons_context.py`](ons_context.py) downloads the current official workbook, reads the two named series by their ONS IDs, checks month alignment and writes the small JSON summary. Review the output and commit `outputs/ons_market.json`, `report.html` and `index.html` to publish an updated static demo. The test fixture checks that a later revision table cannot overwrite the main series.
-
-## Explore markets with real data
-
-[Open the interactive market explorer](https://banoth281.github.io/retail-growth-retention-decision-studio/#explorer) near the top of the dashboard:
-
-1. Select a **country** or keep **All countries**.
-2. Select a **month** or keep **All months**.
-3. Compare the filtered **positive sales line value**, **valid sale lines**, and **share of all valid sales**. Inspect the monthly trend below the filters.
-4. Select **Download filtered CSV** to inspect the aggregated country-month rows in Excel or another tool. The export does not contain customer records.
-
-For a quick demo, choose **France** and then switch between **All months** and a month in 2011. The numbers and trend come from the UCI workbook processed by [`analyze.py`](analyze.py), using the same valid-sale rule as the headline KPI. The market aggregation is checked against the headline sales value and valid sale-line count in [the tests](tests/test_metrics.py). A valid sale line is a transaction line, not an invoice or customer. Country is the value recorded in the source. The trend shows full months January–November 2011; **All months** KPIs also include December 2010 and the partial December 2011.
+The case study analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
 
 ## Get the data and run locally (Windows, Python 3.10+)
 
@@ -105,9 +23,7 @@ Open a PowerShell terminal in the repository folder:
 
 ```powershell
 python -m pip install -r requirements.txt
-python ons_context.py
 python analyze.py
-Copy-Item report.html index.html
 python -m unittest discover -s tests -v
 start report.html
 ```
@@ -137,6 +53,6 @@ The December 2011 source is partial, ending 9 December. The monthly revenue char
 
 ## Evidence for recruiters
 
-The report includes a source and methods panel, KPI cards, interactive country/month market explorer with CSV export, monthly trend, product ranking, cohort retention table and a separate what-if sales calculator. The SQLite database supports ad hoc SQL review. `sql/analysis.sql` supplies reconciliation and segment queries. The Python tests check revenue filtering, cancellation handling, cohort denominators and the ONS parser; the JavaScript tests check planner arithmetic, CSV parsing and own-data analysis.
+The report includes a source and methods panel, KPI cards, monthly trend, product ranking and cohort retention table. The SQLite database supports ad hoc SQL review. `sql/analysis.sql` supplies reconciliation and segment queries. The tests check revenue filtering, cancellation handling and cohort denominators on a deliberately small fixture.
 
-This is an analysis case study, not a live shop. Suggested next milestone: turn the findings into a Power BI dashboard with slicers and document one business decision and its assumptions.
+This is a browser based decision tool and an analysis case study, not a live shop. `python -m unittest discover -s tests -v` and `node --test tests/campaign.test.js tests/your_data.test.js` cover the analysis and calculators; GitHub Actions runs both on pushes.
