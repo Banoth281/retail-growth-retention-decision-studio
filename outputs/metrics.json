@@ -1,0 +1,11 @@
+{
+  "source_rows": 541909,
+  "valid_sale_lines": 530104,
+  "excluded_lines": 11805,
+  "cancel_lines": 10624,
+  "revenue_gbp": 10666684.54,
+  "valid_invoices": 19960,
+  "identified_customers": 4338,
+  "repeat_customer_rate": 0.6558,
+  "unknown_customer_sale_lines": 132220
+}
