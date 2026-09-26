@@ -55,3 +55,15 @@ test('retains identical-looking line items and reports missing customer IDs', ()
   assert.equal(result.repeatRate, null);
   assert.equal(result.quality.unknownCustomer, 2);
 });
+
+test('compares recorded periods and aggregates optional product and region fields', () => {
+  const rows = parseCsv('date,order,value,product,region\n2026-01-01,A,10,Tea,North\n2026-03-01,B,20,Coffee,South\n2026-03-03,C,5,Tea,North\n2026-03-03,D,-5,Tea,South\n');
+  const result = analyzeCsv(rows, {date:0,order:1,value:2,product:3,market:4});
+  assert.deepEqual(result.products, [{label:'Tea',value:15},{label:'Coffee',value:20}].sort((a,b) => b.value - a.value));
+  assert.deepEqual(result.markets, [{label:'South',value:20},{label:'North',value:15}]);
+  assert.equal(result.comparison.gap, 2);
+  assert.equal(result.comparison.difference, 15);
+  assert.equal(result.comparison.percent, 150);
+  assert.equal(result.quality.excluded, 1);
+  assert.throws(() => analyzeCsv(rows, {date:0,order:1,value:2,product:2}), /different valid columns/);
+});

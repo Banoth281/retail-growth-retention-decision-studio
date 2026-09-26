@@ -57,11 +57,13 @@ function parseAmount(text, numberFormat = 'dot') {
 function analyzeCsv(rows, map, options = {}) {
   if (rows.length < 2) throw new Error('The CSV needs a header and at least one data row.');
   const required = [map.date, map.order, map.value];
-  if (required.some(index => !Number.isInteger(index) || index < 0 || index >= rows[0].length) ||
-      new Set(required).size !== required.length || (map.customer != null && (required.includes(map.customer) || map.customer >= rows[0].length))) {
-    throw new Error('Map different columns for date, order ID and value. Customer ID is optional.');
+  const chosen = [...required, map.customer, map.product, map.market].filter(index => index != null);
+  if (chosen.some(index => !Number.isInteger(index) || index < 0 || index >= rows[0].length) ||
+      new Set(chosen).size !== chosen.length) {
+    throw new Error('Map different valid columns for date, order ID and value. Other fields are optional.');
   }
   const orderIds = new Set(), customers = new Map(), monthly = new Map(), seen = new Set();
+  const products = new Map(), markets = new Map();
   const quality = {total: rows.length - 1, excluded: 0, missingOrder: 0, invalidDate: 0,
     invalidValue: 0, wrongColumns: 0, repeatedIdenticalRows: 0, unknownCustomer: 0};
   let revenue = 0, valid = 0;
@@ -82,6 +84,14 @@ function analyzeCsv(rows, map, options = {}) {
     revenue += amount;
     orderIds.add(order);
     monthly.set(month, (monthly.get(month) || 0) + amount);
+    if (map.product != null) {
+      const label = row[map.product].trim() || 'Unspecified';
+      products.set(label, (products.get(label) || 0) + amount);
+    }
+    if (map.market != null) {
+      const label = row[map.market].trim() || 'Unspecified';
+      markets.set(label, (markets.get(label) || 0) + amount);
+    }
     const customer = map.customer == null ? '' : row[map.customer].trim();
     if (customer) {
       if (!customers.has(customer)) customers.set(customer, new Set());
@@ -90,10 +100,21 @@ function analyzeCsv(rows, map, options = {}) {
   }
   if (!valid) throw new Error('No valid positive sales rows. Check the column mapping and date format.');
   const repeat = [...customers.values()].filter(orders => orders.size >= 2).length;
+  const monthlyValues = [...monthly].sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([month, value]) => ({month, value: Math.round(value * 100) / 100}));
+  const latest = monthlyValues.at(-1), previous = monthlyValues.at(-2);
+  const monthIndex = month => Number(month.slice(0, 4)) * 12 + Number(month.slice(5));
+  const comparison = previous ? {latest, previous,
+    difference: Math.round((latest.value - previous.value) * 100) / 100,
+    percent: (latest.value - previous.value) / previous.value * 100,
+    gap: monthIndex(latest.month) - monthIndex(previous.month)} : null;
+  const breakdown = values => [...values].map(([label, value]) => ({label, value: Math.round(value * 100) / 100}))
+    .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
   return {revenue: Math.round(revenue * 100) / 100, orders: orderIds.size, valid,
     aov: revenue / orderIds.size, customers: customers.size,
     repeatRate: customers.size ? repeat / customers.size : null,
-    monthly: [...monthly].sort((a, b) => a[0].localeCompare(b[0])).map(([month, value]) => ({month, value: Math.round(value * 100) / 100})),
+    monthly: monthlyValues, comparison, products: map.product == null ? null : breakdown(products),
+    markets: map.market == null ? null : breakdown(markets),
     quality};
 }
 
@@ -102,7 +123,8 @@ if (typeof module !== 'undefined') module.exports = {parseCsv, parseMonth, parse
 if (typeof document !== 'undefined') {
   const fileInput = document.getElementById('sales-file');
   const mapping = document.getElementById('csv-mapping');
-  const selects = ['date', 'order', 'value', 'customer'].map(key => document.getElementById('column-' + key));
+  const keys = ['date', 'order', 'value', 'customer', 'product', 'market'];
+  const selects = keys.map(key => document.getElementById('column-' + key));
   const status = document.getElementById('csv-status');
   const output = document.getElementById('own-results');
   const countryInput = document.getElementById('country-name');
@@ -125,7 +147,9 @@ if (typeof document !== 'undefined') {
     date: ['order_date', 'date', 'invoice_date', 'invoicedate', 'transaction_date'],
     order: ['order_id', 'orderid', 'invoice_no', 'invoiceno', 'invoice', 'transaction_id'],
     value: ['order_value', 'sales_value', 'line_value', 'revenue', 'amount', 'total', 'sales'],
-    customer: ['customer_id', 'customerid', 'customer', 'buyer_id']
+    customer: ['customer_id', 'customerid', 'customer', 'buyer_id'],
+    product: ['product', 'product_name', 'item', 'sku', 'category'],
+    market: ['market', 'region', 'state', 'country', 'city']
   };
   const normal = text => text.toLowerCase().replace(/[^a-z0-9]/g, '');
   const setStatus = (message, isError = false) => {status.textContent = message; status.classList.toggle('negative', isError);};
@@ -140,6 +164,7 @@ if (typeof document !== 'undefined') {
     rows = summary = null; sourceLabel = '';
     mapping.hidden = output.hidden = true;
     document.getElementById('own-export').disabled = true;
+    document.getElementById('own-brief').disabled = true;
     progress(0);
   }
 
@@ -150,10 +175,10 @@ if (typeof document !== 'undefined') {
     rows = parsed; sourceLabel = label;
     for (let i = 0; i < selects.length; i++) {
       const select = selects[i]; select.replaceChildren();
-      if (i === 3) {const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'No customer ID'; select.append(blank);}
+      if (i >= 3) {const blank = document.createElement('option'); blank.value = ''; blank.textContent = 'Not mapped'; select.append(blank);}
       rows[0].forEach((name, index) => {const option = document.createElement('option'); option.value = String(index); option.textContent = name || '(unnamed column ' + (index + 1) + ')'; select.append(option);});
-      const match = rows[0].findIndex(header => guesses[['date','order','value','customer'][i]].some(guess => normal(header) === normal(guess)));
-      select.value = match >= 0 ? String(match) : (i === 3 ? '' : String(Math.min(i, rows[0].length - 1)));
+      const match = rows[0].findIndex(header => guesses[keys[i]].some(guess => normal(header) === normal(guess)));
+      select.value = match >= 0 ? String(match) : (i >= 3 ? '' : String(Math.min(i, rows[0].length - 1)));
     }
     mapping.hidden = false;
     progress(1);
@@ -195,6 +220,7 @@ if (typeof document !== 'undefined') {
     input.addEventListener('input', () => {
       if (summary) {summary = null; output.hidden = true; progress(rows ? 1 : 0);
         document.getElementById('own-export').disabled = true;
+        document.getElementById('own-brief').disabled = true;
         setStatus('Settings changed. Run the analysis again to update your results.');}
     });
   }
@@ -221,7 +247,7 @@ if (typeof document !== 'undefined') {
       catch {throw new Error('Enter a supported three-letter currency code.');}
       currencyInput.value = currency;
       const indices = selects.map(select => select.value === '' ? null : Number(select.value));
-      summary = analyzeCsv(rows, {date:indices[0], order:indices[1], value:indices[2], customer:indices[3]},
+      summary = analyzeCsv(rows, {date:indices[0], order:indices[1], value:indices[2], customer:indices[3], product:indices[4], market:indices[5]},
         {dateFormat: dateFormatInput.value, numberFormat: numberFormatInput.value});
       document.getElementById('own-revenue').textContent = money(summary.revenue);
       document.getElementById('own-orders').textContent = number(summary.orders);
@@ -239,10 +265,28 @@ if (typeof document !== 'undefined') {
       }
       const peak = summary.monthly.reduce((best, item) => item.value > best.value ? item : best);
       document.getElementById('own-insight').textContent = `Highest recorded sales month: ${peak.month} (${money(peak.value)}). Review what drove that month before planning a campaign.`;
+      const comparison = summary.comparison;
+      document.getElementById('own-period').textContent = comparison
+        ? `${comparison.latest.month}: ${money(comparison.latest.value)} versus ${comparison.previous.month}: ${money(comparison.previous.value)}. Difference: ${comparison.difference >= 0 ? '+' : ''}${money(comparison.difference)} (${comparison.percent >= 0 ? '+' : ''}${comparison.percent.toFixed(1)}%). ${comparison.gap > 1 ? 'There is a gap between recorded months. ' : ''}These figures use recorded rows only; incomplete months can mislead.`
+        : 'Add sales from a second month to compare periods.';
+      for (const [key, values] of [['products', summary.products], ['markets', summary.markets]]) {
+        const section = document.getElementById('own-' + key + '-section');
+        section.hidden = !values;
+        if (!values) continue;
+        const body = document.getElementById('own-' + key); body.replaceChildren();
+        values.slice(0, 5).forEach(item => {
+          const tr = document.createElement('tr');
+          for (const value of [item.label, money(item.value)]) {
+            const td = document.createElement('td'); td.textContent = value; tr.append(td);
+          }
+          body.append(tr);
+        });
+      }
       const q = summary.quality;
       document.getElementById('own-quality').textContent = `${number(summary.valid)} positive sale rows used; ${number(q.excluded)} excluded (${number(q.missingOrder)} missing order IDs, ${number(q.invalidDate)} invalid dates, ${number(q.invalidValue)} non-positive or invalid values, ${number(q.wrongColumns)} rows with the wrong column count). ${number(q.repeatedIdenticalRows)} identical-looking rows flagged but retained. ${number(q.unknownCustomer)} valid rows have no customer ID.`;
       document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${countryInput.value.trim() || 'Country not specified'} · ${currency} · ${number(summary.valid)} usable rows`;
       output.hidden = false; document.getElementById('own-export').disabled = false;
+      document.getElementById('own-brief').disabled = false;
       progress(2);
       setStatus('Analysis complete. Only summary figures are displayed; your file remains in this browser tab.');
       output.scrollIntoView({behavior: 'smooth', block: 'start'});
@@ -262,6 +306,27 @@ if (typeof document !== 'undefined') {
     const lines = [`month,positive_sales_value_${currencyInput.value.toLowerCase()}`, ...summary.monthly.map(item => `${item.month},${item.value.toFixed(2)}`)];
     const url = URL.createObjectURL(new Blob([lines.join('\r\n') + '\r\n'], {type:'text/csv;charset=utf-8'}));
     const link = document.createElement('a'); link.href = url; link.download = 'my-monthly-sales-summary.csv'; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  document.getElementById('own-brief').addEventListener('click', () => {
+    if (!summary) return;
+    const q = summary.quality, c = summary.comparison;
+    const lines = ['RETAIL DECISION BRIEF', `Source: ${sourceLabel}`, `Country: ${countryInput.value.trim() || 'Not specified'}`,
+      `Currency: ${currencyInput.value}`, `Positive sales value: ${money(summary.revenue)}`,
+      `Distinct orders: ${summary.orders}`, `Average order value: ${money(summary.aov)}`,
+      `Identified customer repeat rate: ${summary.repeatRate == null ? 'N/A' : (summary.repeatRate * 100).toFixed(1) + '%'}`,
+      `Usable rows: ${summary.valid}; excluded rows: ${q.excluded}; identical-looking rows retained: ${q.repeatedIdenticalRows}`,
+      '', 'MONTHLY RECORDED POSITIVE SALES', ...summary.monthly.map(item => `${item.month}: ${money(item.value)}`),
+      '', 'PERIOD COMPARISON', c ? `${c.latest.month} vs ${c.previous.month}: ${money(c.difference)} (${c.percent.toFixed(1)}%); ${c.gap > 1 ? 'gap between months' : 'adjacent months'}` : 'Only one month recorded'];
+    for (const [title, values] of [['TOP PRODUCTS', summary.products], ['TOP MARKETS / REGIONS', summary.markets]]) {
+      if (values) lines.push('', title, ...values.slice(0, 5).map(item => `${item.label}: ${money(item.value)}`));
+    }
+    lines.push('', 'INTERPRETATION', 'Rows are positive sales lines, not profit. Returns and refunds are not reconciled.',
+      'Period totals use only supplied rows; incomplete months and missing months can mislead.',
+      'One currency is assumed for the entire file; changing the currency label does not convert values.',
+      'This brief contains aggregates and no raw customer IDs. The sample files are fictional.');
+    const url = URL.createObjectURL(new Blob([lines.join('\n') + '\n'], {type:'text/plain;charset=utf-8'}));
+    const link = document.createElement('a'); link.href = url; link.download = 'retail-decision-brief.txt'; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 }
