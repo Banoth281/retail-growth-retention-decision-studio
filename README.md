@@ -9,6 +9,8 @@
 - To use your own file, choose a UTF-8 comma-separated CSV (up to 5 MB and 100,000 data rows). Supply an order date (`YYYY-MM-DD` or UK `DD/MM/YYYY`), order ID and positive sales value. A customer ID is optional. Map the columns and review the resulting sales summary, monthly chart and validation counts. Download an aggregated monthly summary if useful.
 - Select **Use my order value in planner** to carry the calculated average order value to the campaign planner. Set your own reach, conversion, gross margin and spend assumptions; the planner reports a scenario, not a forecast or observed campaign result.
 - Selected files are read by JavaScript in your browser tab and are not uploaded to this static site. The sample, the 2010–11 UCI case study and ONS market context are separate from your file.
+- The **2026 market** panel near the top uses the ONS Retail Sales Index internet sales series for Great Britain. The latest displayed month is August 2026, released on 18 September 2026. It shows national online share and average weekly online sales, with explicit units and source. Run `python ons_context.py` after a future ONS release, then `python analyze.py`, and republish the generated `report.html` as `index.html`. It does not update automatically between releases.
+- The 2011 monthly values under **Historical explorer** and **Case study** are the UCI retailer's transactions. They cannot be extended into 2026 without another retailer's actual transaction data. Your own current CSV can show its own recent months without mixing these sources.
 - [View the source report](report.html) and [analysis code](analyze.py) in this repository.
 
 ![Monthly valid sales, January–November 2011](outputs/monthly_revenue.png)
