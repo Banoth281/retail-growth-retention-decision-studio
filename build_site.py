@@ -40,6 +40,7 @@ def render_market(data):
         f'<p>Great Britain · latest available month <strong>{escape(latest["month"])}</strong> · '
         f'published <strong>{escape(data["release_date"])}</strong></p></div>'
         '<span class="tool-badge">ONS data</span></div>'
+        '<p id="market-scope" class="market-scope">This panel describes Great Britain. It is separate from your uploaded sales.</p>'
         '<div class="cards"><div class="card">Online share of retail sales'
         f'<div class="value">{latest["online_share_pct"]:.1f}%</div>'
         '<small>Seasonally adjusted, excluding fuel</small></div>'

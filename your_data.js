@@ -27,15 +27,16 @@ function parseCsv(text) {
   return rows;
 }
 
-function parseMonth(text) {
+function parseMonth(text, dateFormat = 'DMY') {
   const value = String(text || '').trim();
   let year, month, day;
   let match = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$/.exec(value);
   if (match) [, year, month, day] = match;
   else {
-    match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T].*)?$/.exec(value);
+    match = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:[ T].*)?$/.exec(value);
     if (!match) return null;
-    [, day, month, year] = match; // UK day/month/year
+    if (dateFormat === 'MDY') [, month, day, year] = match;
+    else [, day, month, year] = match;
   }
   year = Number(year); month = Number(month); day = Number(day);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -43,7 +44,17 @@ function parseMonth(text) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function analyzeCsv(rows, map) {
+function parseAmount(text, numberFormat = 'dot') {
+  const raw = String(text || '').trim().replace(/^[A-Z]{3}\s*/i, '').replace(/\s*[A-Z]{3}$/i, '')
+    .replace(/\p{Sc}/gu, '').replace(/\s/g, '');
+  const grouped = numberFormat === 'comma'
+    ? /^[-+]?(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,3})?$/
+    : /^[-+]?(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,3}(?:,\d{2})+,\d{3})(?:\.\d{1,3})?$/;
+  if (!grouped.test(raw)) return NaN;
+  return Number(numberFormat === 'comma' ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, ''));
+}
+
+function analyzeCsv(rows, map, options = {}) {
   if (rows.length < 2) throw new Error('The CSV needs a header and at least one data row.');
   const required = [map.date, map.order, map.value];
   if (required.some(index => !Number.isInteger(index) || index < 0 || index >= rows[0].length) ||
@@ -60,8 +71,8 @@ function analyzeCsv(rows, map) {
     if (seen.has(fingerprint)) quality.repeatedIdenticalRows++;
     seen.add(fingerprint); // Flag only: equal-looking product lines can be legitimate.
     const order = row[map.order].trim();
-    const month = parseMonth(row[map.date]);
-    const amount = Number(row[map.value].replace(/[£,\s]/g, ''));
+    const month = parseMonth(row[map.date], options.dateFormat || 'DMY');
+    const amount = parseAmount(row[map.value], options.numberFormat || 'dot');
     if (!order) { quality.missingOrder++; quality.excluded++; continue; }
     if (!month) { quality.invalidDate++; quality.excluded++; continue; }
     if (!row[map.value].trim() || !Number.isFinite(amount) || amount <= 0) {
@@ -86,7 +97,7 @@ function analyzeCsv(rows, map) {
     quality};
 }
 
-if (typeof module !== 'undefined') module.exports = {parseCsv, parseMonth, analyzeCsv};
+if (typeof module !== 'undefined') module.exports = {parseCsv, parseMonth, parseAmount, analyzeCsv};
 
 if (typeof document !== 'undefined') {
   const fileInput = document.getElementById('sales-file');
@@ -94,8 +105,21 @@ if (typeof document !== 'undefined') {
   const selects = ['date', 'order', 'value', 'customer'].map(key => document.getElementById('column-' + key));
   const status = document.getElementById('csv-status');
   const output = document.getElementById('own-results');
-  const money = value => new Intl.NumberFormat('en-GB', {style: 'currency', currency: 'GBP'}).format(value);
+  const countryInput = document.getElementById('country-name');
+  const currencyInput = document.getElementById('currency-code');
+  const dateFormatInput = document.getElementById('date-format');
+  const numberFormatInput = document.getElementById('number-format');
+  const money = value => new Intl.NumberFormat(currencyInput.value.toUpperCase() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
+    {style: 'currency', currency: currencyInput.value.toUpperCase()}).format(value);
   const number = value => new Intl.NumberFormat('en-GB').format(value);
+  const marketScope = document.getElementById('market-scope');
+  function updateMarketScope() {
+    const country = countryInput.value.trim();
+    marketScope.textContent = country && !/^(uk|united kingdom|great britain|gb)$/i.test(country)
+      ? `This ONS panel describes Great Britain, not ${country}. Your uploaded sales and currency remain separate.`
+      : 'This ONS panel describes Great Britain. It is separate from your uploaded sales.';
+  }
+  countryInput.addEventListener('input', updateMarketScope);
   let rows = null, summary = null, sourceLabel = '';
   const guesses = {
     date: ['order_date', 'date', 'invoice_date', 'invoicedate', 'transaction_date'],
@@ -146,6 +170,7 @@ if (typeof document !== 'undefined') {
   });
 
   async function loadSample() {
+    document.querySelector('[data-country-preset="United Kingdom"]').click();
     reset();
     setStatus('Loading fictional sample…');
     try {
@@ -158,11 +183,46 @@ if (typeof document !== 'undefined') {
   document.getElementById('load-sample').addEventListener('click', loadSample);
   document.getElementById('hero-sample').addEventListener('click', event => {event.preventDefault(); loadSample();});
 
+  document.querySelectorAll('[data-country-preset]').forEach(button => button.addEventListener('click', () => {
+    countryInput.value = button.dataset.countryPreset;
+    currencyInput.value = button.dataset.currency;
+    dateFormatInput.value = button.dataset.dateFormat;
+    numberFormatInput.value = 'dot';
+    currencyInput.dispatchEvent(new Event('input', {bubbles: true}));
+    updateMarketScope();
+  }));
+  for (const input of [countryInput, currencyInput, dateFormatInput, numberFormatInput]) {
+    input.addEventListener('input', () => {
+      if (summary) {summary = null; output.hidden = true; progress(rows ? 1 : 0);
+        document.getElementById('own-export').disabled = true;
+        setStatus('Settings changed. Run the analysis again to update your results.');}
+    });
+  }
+
+  async function loadIndiaSample() {
+    document.querySelector('[data-country-preset="India"]').click();
+    reset();
+    setStatus('Loading fictional India sample…');
+    try {
+      const response = await fetch('sample_india_sales.csv');
+      if (!response.ok) throw new Error('India sample is unavailable. Download the CSV and choose it instead.');
+      loadText(await response.text(), 'Fictional India sample');
+      mapping.scrollIntoView({behavior: 'smooth', block: 'start'});
+    } catch (error) {reset(); setStatus(error.message, true);}
+  }
+  document.getElementById('load-india-sample').addEventListener('click', loadIndiaSample);
+
   document.getElementById('own-run').addEventListener('click', () => {
     if (!rows) return;
     try {
+      const currency = currencyInput.value.trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(currency)) throw new Error('Enter a three-letter currency code such as INR, GBP or USD.');
+      try {new Intl.NumberFormat('en', {style:'currency', currency});}
+      catch {throw new Error('Enter a supported three-letter currency code.');}
+      currencyInput.value = currency;
       const indices = selects.map(select => select.value === '' ? null : Number(select.value));
-      summary = analyzeCsv(rows, {date:indices[0], order:indices[1], value:indices[2], customer:indices[3]});
+      summary = analyzeCsv(rows, {date:indices[0], order:indices[1], value:indices[2], customer:indices[3]},
+        {dateFormat: dateFormatInput.value, numberFormat: numberFormatInput.value});
       document.getElementById('own-revenue').textContent = money(summary.revenue);
       document.getElementById('own-orders').textContent = number(summary.orders);
       document.getElementById('own-aov').textContent = money(summary.aov);
@@ -181,7 +241,7 @@ if (typeof document !== 'undefined') {
       document.getElementById('own-insight').textContent = `Highest recorded sales month: ${peak.month} (${money(peak.value)}). Review what drove that month before planning a campaign.`;
       const q = summary.quality;
       document.getElementById('own-quality').textContent = `${number(summary.valid)} positive sale rows used; ${number(q.excluded)} excluded (${number(q.missingOrder)} missing order IDs, ${number(q.invalidDate)} invalid dates, ${number(q.invalidValue)} non-positive or invalid values, ${number(q.wrongColumns)} rows with the wrong column count). ${number(q.repeatedIdenticalRows)} identical-looking rows flagged but retained. ${number(q.unknownCustomer)} valid rows have no customer ID.`;
-      document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${number(summary.valid)} usable rows`;
+      document.getElementById('own-source').textContent = `Source: ${sourceLabel} · ${countryInput.value.trim() || 'Country not specified'} · ${currency} · ${number(summary.valid)} usable rows`;
       output.hidden = false; document.getElementById('own-export').disabled = false;
       progress(2);
       setStatus('Analysis complete. Only summary figures are displayed; your file remains in this browser tab.');
@@ -199,7 +259,7 @@ if (typeof document !== 'undefined') {
 
   document.getElementById('own-export').addEventListener('click', () => {
     if (!summary) return;
-    const lines = ['month,positive_sales_value_gbp', ...summary.monthly.map(item => `${item.month},${item.value.toFixed(2)}`)];
+    const lines = [`month,positive_sales_value_${currencyInput.value.toLowerCase()}`, ...summary.monthly.map(item => `${item.month},${item.value.toFixed(2)}`)];
     const url = URL.createObjectURL(new Blob([lines.join('\r\n') + '\r\n'], {type:'text/csv;charset=utf-8'}));
     const link = document.createElement('a'); link.href = url; link.download = 'my-monthly-sales-summary.csv'; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);

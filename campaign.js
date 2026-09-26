@@ -14,12 +14,17 @@ if (typeof module !== 'undefined') module.exports = {campaignModel};
 if (typeof document !== 'undefined') {
   const ids = ['reached', 'conversion', 'basket', 'margin', 'spend'];
   const inputs = ids.map(id => document.getElementById(id));
-  const formatMoney = value => new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP'}).format(value);
+  const currencyInput = document.getElementById('currency-code');
+  const currentCurrency = () => /^[A-Z]{3}$/.test(currencyInput.value.trim().toUpperCase())
+    ? currencyInput.value.trim().toUpperCase() : 'GBP';
+  const formatMoney = value => new Intl.NumberFormat(currentCurrency() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
+    {style:'currency', currency:currentCurrency()}).format(value);
   const formatNumber = value => new Intl.NumberFormat('en-GB', {maximumFractionDigits:1}).format(value);
   const exportButton = document.getElementById('planner-export');
   let current = null;
 
   function update() {
+    document.getElementById('planner-currency').textContent = currentCurrency();
     const values = inputs.map(input => input.valueAsNumber);
     const invalid = inputs.some(input => input.value === '' || !input.validity.valid || !Number.isFinite(input.valueAsNumber)) || !Number.isInteger(values[0]);
     const error = document.getElementById('planner-error');
@@ -60,10 +65,11 @@ if (typeof document !== 'undefined') {
   }
 
   inputs.forEach(input => input.addEventListener('input', update));
+  currencyInput.addEventListener('input', update);
   exportButton.addEventListener('click', () => {
     if (!current) return;
-    const header = 'customers_reached,conversion_pct,average_order_gbp,gross_margin_pct,campaign_spend_gbp,expected_extra_orders,incremental_sales_gbp,gross_contribution_gbp,contribution_after_spend_gbp,break_even_conversion_pct';
-    const row = [current.reach, current.rate, current.basket, current.margin, current.spend,
+    const header = 'currency_code,customers_reached,conversion_pct,average_order_value,gross_margin_pct,campaign_spend,expected_extra_orders,incremental_sales,gross_contribution,contribution_after_spend,break_even_conversion_pct';
+    const row = [currentCurrency(), current.reach, current.rate, current.basket, current.margin, current.spend,
       current.orders, current.sales, current.grossContribution, current.netContribution,
       Number.isFinite(current.breakEvenRate) ? current.breakEvenRate : 'not_reachable'].join(',');
     const url = URL.createObjectURL(new Blob([header + '\r\n' + row + '\r\n'], {type:'text/csv;charset=utf-8'}));
