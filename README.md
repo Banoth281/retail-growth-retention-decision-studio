@@ -13,7 +13,7 @@ python -m unittest discover -s tests -v
 start report.html
 ```
 
-The supplied project ZIP contains the UCI source workbook in `data/`, so it runs offline after Python packages are installed. If the workbook is absent, `analyze.py` downloads it from UCI on first run (about 24 MB). It writes `report.html`, `outputs/metrics.json`, and `outputs/retail.db`. Later runs reuse the source file.
+The source workbook is not committed to GitHub. `analyze.py` downloads it from UCI on first run (about 24 MB), then reuses the local copy. It writes `report.html`, `outputs/metrics.json`, and `outputs/retail.db`. The downloadable project ZIP also includes the workbook for offline analysis.
 
 ## Definitions and decisions
 
