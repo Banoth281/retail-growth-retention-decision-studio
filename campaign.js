@@ -15,8 +15,12 @@ if (typeof document !== 'undefined') {
   const ids = ['reached', 'conversion', 'basket', 'margin', 'spend'];
   const inputs = ids.map(id => document.getElementById(id));
   const currencyInput = document.getElementById('currency-code');
-  const currentCurrency = () => /^[A-Z]{3}$/.test(currencyInput.value.trim().toUpperCase())
-    ? currencyInput.value.trim().toUpperCase() : 'GBP';
+  const currentCurrency = () => {
+    const code = currencyInput.value.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code)) return null;
+    try { new Intl.NumberFormat('en', {style:'currency', currency:code}); return code; }
+    catch { return null; }
+  };
   const formatMoney = value => new Intl.NumberFormat(currentCurrency() === 'INR' ? 'en-IN' : navigator.language || 'en-GB',
     {style:'currency', currency:currentCurrency()}).format(value);
   const formatNumber = value => new Intl.NumberFormat('en-GB', {maximumFractionDigits:1}).format(value);
@@ -24,16 +28,18 @@ if (typeof document !== 'undefined') {
   let current = null;
 
   function update() {
-    document.getElementById('planner-currency').textContent = currentCurrency();
+    const currency = currentCurrency();
+    document.getElementById('planner-currency').textContent = currency || 'Choose currency';
     const values = inputs.map(input => input.valueAsNumber);
     const invalid = inputs.some(input => input.value === '' || !input.validity.valid || !Number.isFinite(input.valueAsNumber)) || !Number.isInteger(values[0]);
     const error = document.getElementById('planner-error');
     error.hidden = !invalid;
-    exportButton.disabled = invalid;
-    if (invalid) {
+    exportButton.disabled = invalid || !currency;
+    if (invalid || !currency) {
       current = null;
       for (const id of ['orders', 'estimate', 'net', 'break-even']) document.getElementById(id).textContent = '—';
-      document.getElementById('planner-insight').textContent = 'Please correct the inputs to see a scenario.';
+      document.getElementById('planner-insight').textContent = !currency
+        ? 'Choose a country or enter a currency to model a scenario.' : 'Please correct the inputs to see a scenario.';
       document.getElementById('sensitivity').replaceChildren();
       return;
     }
