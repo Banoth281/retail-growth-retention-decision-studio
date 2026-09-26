@@ -22,6 +22,17 @@ This is a *what-if calculation*, not a forecast, observed campaign result, or pr
 
 This portfolio project analyses UCI's **Online Retail** dataset: historical transactions from a UK-based online retailer between December 2010 and December 2011. It is a real public dataset, not current business activity. Source credit: Chen, D. (2015), *Online Retail*, UCI Machine Learning Repository, https://doi.org/10.24432/C5BW33, licensed CC BY 4.0. No source records were altered in the supplied workbook; the analysis creates derived outputs.
 
+## Explore markets with real data
+
+[Open the interactive market explorer](https://banoth281.github.io/retail-growth-retention-decision-studio/#explorer) near the top of the dashboard:
+
+1. Select a **country** or keep **All countries**.
+2. Select a **month** or keep **All months**.
+3. Compare the filtered **positive sales line value**, **valid sale lines**, and **share of all valid sales**. Inspect the monthly trend below the filters.
+4. Select **Download filtered CSV** to inspect the aggregated country-month rows in Excel or another tool. The export does not contain customer records.
+
+For a quick demo, choose **France** and then switch between **All months** and a month in 2011. The numbers and trend come from the UCI workbook processed by [`analyze.py`](analyze.py), using the same valid-sale rule as the headline KPI. The market aggregation is checked against the headline sales value and valid sale-line count in [the tests](tests/test_metrics.py). A valid sale line is a transaction line, not an invoice or customer. Country is the value recorded in the source. The trend shows full months January–November 2011; **All months** KPIs also include December 2010 and the partial December 2011.
+
 ## Get the data and run locally (Windows, Python 3.10+)
 
 The dataset is [Online Retail at UCI](https://archive.ics.uci.edu/dataset/352/online+retail). You can [download the source ZIP directly](https://archive.ics.uci.edu/static/public/352/online+retail.zip), extract `Online Retail.xlsx`, and put it in a `data` folder next to `analyze.py`. **You can also skip this download:** `python analyze.py` fetches and saves the workbook automatically on first run.
@@ -60,6 +71,6 @@ The December 2011 source is partial, ending 9 December. The monthly revenue char
 
 ## Evidence for recruiters
 
-The report includes a source and methods panel, KPI cards, monthly trend, product ranking and cohort retention table. The SQLite database supports ad hoc SQL review. `sql/analysis.sql` supplies reconciliation and segment queries. The tests check revenue filtering, cancellation handling and cohort denominators on a deliberately small fixture.
+The report includes a source and methods panel, KPI cards, interactive country/month market explorer with CSV export, monthly trend, product ranking, cohort retention table and a separate what-if sales calculator. The SQLite database supports ad hoc SQL review. `sql/analysis.sql` supplies reconciliation and segment queries. The tests check revenue filtering, cancellation handling and cohort denominators on a deliberately small fixture.
 
 This is an analysis case study, not a live shop. Suggested next milestone: turn the findings into a Power BI dashboard with slicers and document one business decision and its assumptions.
