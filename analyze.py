@@ -114,12 +114,46 @@ def render(metrics, months, products, cohort, sales):
     fig.tight_layout();fig.savefig(OUTPUT/'top_products.png',dpi=150);plt.close(fig)
     rows=''.join(f"<tr><td>{escape(str(r.cohort))}</td><td>{r.customers:,}</td><td>{r.month_1_customers:,}</td><td>{r.month_1_rate:.1%}</td></tr>" for r in cohort.itertuples())
     market_json = json.dumps(market_summary(sales), ensure_ascii=True).replace('<', '\\u003c')
+    ons_path = OUTPUT / 'ons_market.json'
+    if ons_path.exists():
+        ons = json.loads(ons_path.read_text(encoding='utf-8'))
+        series = ons['series']
+        latest = series[-1]
+        current_year = latest['month'][:4]
+        recent = [item for item in series if item['month'].startswith(current_year)]
+        ons_rows = ''.join(
+            f'<div class="barrow"><span>{escape(item["month"])}</span>'
+            f'<div class="bartrack"><div class="barfill" style="width:{item["online_share_pct"]:.1f}%"></div></div>'
+            f'<span class="barvalue">{item["online_share_pct"]:.1f}%</span></div>'
+            for item in recent
+        )
+        ons_html = (
+            '<section id="current-market"><h2>Current UK market context · ONS</h2>'
+            f'<p>Latest observation: <strong>{escape(latest["month"])}</strong>; ONS release: '
+            f'<strong>{escape(ons["release_date"])}</strong>. Great Britain, seasonally adjusted, '
+            'all retailing excluding automotive fuel.</p>'
+            '<div class="cards"><div class="card">Retail sales made online'
+            f'<div class="value">{latest["online_share_pct"]:.1f}%</div></div>'
+            '<div class="card">Average weekly online sales'
+            f'<div class="value">£{latest["average_weekly_online_sales_gbp_m"]:,.1f}m</div></div></div>'
+            f'<p>Online share by month in {current_year} (percent of retail sales):</p>'
+            f'<div class="bars" role="img" aria-label="ONS online sales share by month in {current_year}">{ons_rows}</div>'
+            '<p class="note">These ONS figures describe the Great Britain retail market in a different period. '
+            'They are context, not the revenue, customer retention or growth of the 2010–11 retailer. '
+            'The percentage bars use a 0–100% scale. The weekly amount is not a monthly total.</p>'
+            f'<small>Source: <a href="{escape(ons["source"])}">ONS Retail Sales Index internet sales</a>, '
+            'series MS6Y and MZX6. Refresh with <code>python ons_context.py</code>, then '
+            '<code>python analyze.py</code>; ONS may revise past observations.</small></section>'
+        )
+    else:
+        ons_html = '<section id="current-market"><h2>Current UK market context · ONS</h2><p>Run <code>python ons_context.py</code> and <code>python analyze.py</code> to add the latest official ONS series.</p></section>'
     report=f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Retail Growth & Retention Decision Studio</title><style>
 body{{background:#0c1422;color:#eaf2fb;font:16px system-ui;max-width:1100px;margin:32px auto;padding:0 20px}}h1{{font-size:38px}}p,small{{color:#b9c9dc;line-height:1.6}}a{{color:#54ddc1}}.cards{{display:flex;flex-wrap:wrap;gap:14px}}.card,section{{background:#172439;border:1px solid #30435c;border-radius:12px;padding:20px;margin:18px 0}}.card{{min-width:190px;flex:1}}.value{{font-size:30px;color:#54ddc1;font-weight:700}}img{{width:100%;height:auto}}table{{border-collapse:collapse;width:100%}}th,td{{padding:10px;border-bottom:1px solid #30435c;text-align:left}}th{{color:#54ddc1}}.note{{border-left:4px solid #f3be67;padding-left:14px}}
 label{{display:block;margin:12px 0}}input{{display:block;margin-top:5px;padding:9px;background:#0c1422;color:#eaf2fb;border:1px solid #54708d;border-radius:5px;width:160px;max-width:100%;font:inherit}}.estimate{{font-size:28px;color:#54ddc1;font-weight:700}}
 select,button{{display:block;margin-top:5px;padding:9px;background:#0c1422;color:#eaf2fb;border:1px solid #54708d;border-radius:5px;font:inherit}}button{{cursor:pointer}}.bars{{display:grid;gap:8px}}.barrow{{display:grid;grid-template-columns:80px 1fr 120px;gap:9px;align-items:center}}.bartrack{{height:16px;background:#30435c;border-radius:4px}}.barfill{{height:100%;background:#54ddc1;border-radius:4px}}.barvalue{{text-align:right}}@media(max-width:550px){{.barrow{{grid-template-columns:65px 1fr 95px;font-size:13px}}}}
 </style></head><body><h1>Retail Growth & Retention</h1><p>Decision studio · historical UK online retail transactions · Dec 2010–Dec 2011</p>
 <div class="cards"><div class="card">Valid sales revenue<div class="value">£{metrics['revenue_gbp']:,.0f}</div></div><div class="card">Valid invoices<div class="value">{metrics['valid_invoices']:,}</div></div><div class="card">Identified customers<div class="value">{metrics['identified_customers']:,}</div></div><div class="card">Repeat customers<div class="value">{metrics['repeat_customer_rate']:.1%}</div></div></div>
+{ons_html}
 <section id="explorer"><h2>Explore markets</h2><p>Filter actual valid sale lines by country and month. These are recorded positive invoice-line values, including some charges; they are not profit. A sale line is not an order. Country is the transaction's recorded country.</p><div class="cards"><label>Country<select id="market-country"></select></label><label>Month<select id="market-month"></select></label></div><div class="cards"><div class="card">Filtered sales value<div id="market-revenue" class="value"></div></div><div class="card">Valid sale lines<div id="market-lines" class="value"></div></div><div class="card">Share of all valid sales<div id="market-share" class="value"></div></div></div><p id="market-description"></p><div id="market-bars" class="bars" role="img" aria-label="Monthly sales value for selected country"></div><p><button id="market-export" type="button">Download filtered CSV</button></p><small>Monthly chart uses January–November 2011 for comparable full months. Filtered KPIs include December 2010 and partial December 2011 when All months is selected. CSV contains aggregated country-month rows, not customer records.</small></section>
 <section><h2>Decision 1 · Plan for the monthly pattern</h2><p>Valid sales by invoice month, January–November 2011. The partial December 2011 month is excluded.</p><img src="outputs/monthly_revenue.png" alt="Monthly revenue trend"></section>
 <section><h2>Decision 2 · Review recurring product demand</h2><p>Top products by distinct invoices across the full observed period. Postage and manual charge codes are excluded from this ranking. Frequency avoids treating one unusually large order as broad demand. A restock decision also needs stock, costs and margin data.</p><img src="outputs/top_products.png" alt="Top products by distinct invoice count"></section>
