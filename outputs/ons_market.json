@@ -1,0 +1,107 @@
+{
+  "source": "https://www.ons.gov.uk/businessindustryandtrade/retailindustry/datasets/retailsalesindexinternetsales",
+  "release_date": "18 September 2026",
+  "definition": "Great Britain, all retailing excluding automotive fuel; seasonally adjusted",
+  "series": [
+    {
+      "month": "2025-01",
+      "online_share_pct": 26.1,
+      "average_weekly_online_sales_gbp_m": 2353.5
+    },
+    {
+      "month": "2025-02",
+      "online_share_pct": 26.6,
+      "average_weekly_online_sales_gbp_m": 2445.7
+    },
+    {
+      "month": "2025-03",
+      "online_share_pct": 27.0,
+      "average_weekly_online_sales_gbp_m": 2501.7
+    },
+    {
+      "month": "2025-04",
+      "online_share_pct": 27.4,
+      "average_weekly_online_sales_gbp_m": 2542.3
+    },
+    {
+      "month": "2025-05",
+      "online_share_pct": 27.3,
+      "average_weekly_online_sales_gbp_m": 2489.8
+    },
+    {
+      "month": "2025-06",
+      "online_share_pct": 27.4,
+      "average_weekly_online_sales_gbp_m": 2525.2
+    },
+    {
+      "month": "2025-07",
+      "online_share_pct": 27.6,
+      "average_weekly_online_sales_gbp_m": 2588.5
+    },
+    {
+      "month": "2025-08",
+      "online_share_pct": 27.7,
+      "average_weekly_online_sales_gbp_m": 2596.0
+    },
+    {
+      "month": "2025-09",
+      "online_share_pct": 27.8,
+      "average_weekly_online_sales_gbp_m": 2638.0
+    },
+    {
+      "month": "2025-10",
+      "online_share_pct": 28.0,
+      "average_weekly_online_sales_gbp_m": 2637.1
+    },
+    {
+      "month": "2025-11",
+      "online_share_pct": 28.2,
+      "average_weekly_online_sales_gbp_m": 2646.9
+    },
+    {
+      "month": "2025-12",
+      "online_share_pct": 28.5,
+      "average_weekly_online_sales_gbp_m": 2677.4
+    },
+    {
+      "month": "2026-01",
+      "online_share_pct": 27.9,
+      "average_weekly_online_sales_gbp_m": 2682.4
+    },
+    {
+      "month": "2026-02",
+      "online_share_pct": 28.3,
+      "average_weekly_online_sales_gbp_m": 2701.4
+    },
+    {
+      "month": "2026-03",
+      "online_share_pct": 29.0,
+      "average_weekly_online_sales_gbp_m": 2780.6
+    },
+    {
+      "month": "2026-04",
+      "online_share_pct": 28.3,
+      "average_weekly_online_sales_gbp_m": 2728.9
+    },
+    {
+      "month": "2026-05",
+      "online_share_pct": 28.9,
+      "average_weekly_online_sales_gbp_m": 2808.2
+    },
+    {
+      "month": "2026-06",
+      "online_share_pct": 29.4,
+      "average_weekly_online_sales_gbp_m": 2880.1
+    },
+    {
+      "month": "2026-07",
+      "online_share_pct": 28.4,
+      "average_weekly_online_sales_gbp_m": 2757.7
+    },
+    {
+      "month": "2026-08",
+      "online_share_pct": 28.8,
+      "average_weekly_online_sales_gbp_m": 2827.9
+    }
+  ]
+}
