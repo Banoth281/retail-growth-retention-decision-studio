@@ -36,6 +36,14 @@ test('analyses fictional India CSV in INR without a currency conversion', () => 
   assert.deepEqual(result.monthly.map(x => x.month), ['2026-01','2026-02','2026-03','2026-04']);
 });
 
+test('fictional GBP sample requires dot-decimal amounts', () => {
+  const rows = parseCsv(readFileSync(join(__dirname, '..', 'sample_sales.csv'), 'utf8'));
+  assert.throws(() => analyzeCsv(rows, {date:0,order:1,customer:2,value:3},
+    {dateFormat:'DMY',numberFormat:'comma'}), /amount format/);
+  assert.equal(analyzeCsv(rows, {date:0,order:1,customer:2,value:3},
+    {dateFormat:'DMY',numberFormat:'dot'}).orders, 12);
+});
+
 test('reconciles line values, distinct orders and identified repeat customers', () => {
   const rows = parseCsv('date,order,value,customer\n2026-01-01,A,10,c1\n2026-01-01,A,5,c1\n2026-02-01,B,20,c1\n2026-02-02,C,30,c2\n2026-02-03,D,-5,c2\n2026-02-31,E,10,c3\n');
   const result = analyzeCsv(rows, {date:0,order:1,value:2,customer:3});

@@ -51,3 +51,5 @@ All amounts in one file are assumed to share the currency selected in the interf
 ### Country and currency selector
 
 The workspace lists the 249 ISO 3166-1 countries and territories (using tzdata's ISO country list). It suggests a tender currency for each from Unicode CLDR 48 currency data; some places have multiple tender currencies, so the currency remains editable. Antarctica has no suggested currency. The selected currency labels amounts in one file; it does not convert them. The Great Britain ONS panel remains a separate market example regardless of the selected country.
+
+The fictional sample button sets day-first dates and dot-decimal amounts to match its CSV. For your own file, confirm **Amount format** before running the analysis: `1,234.56` uses a dot decimal; `1.234,56` uses a comma decimal. If every row is excluded under one format but valid under the other, the tool suggests the matching setting.

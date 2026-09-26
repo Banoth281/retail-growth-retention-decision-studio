@@ -98,7 +98,7 @@ function analyzeCsv(rows, map, options = {}) {
       customers.get(customer).add(order);
     } else quality.unknownCustomer++;
   }
-  if (!valid) throw new Error('No valid positive sales rows. Check the column mapping and date format.');
+  if (!valid) throw new Error('No valid positive sales rows. Check the column mapping, date format and amount format.');
   const repeat = [...customers.values()].filter(orders => orders.size >= 2).length;
   const monthlyValues = [...monthly].sort((a, b) => a[0].localeCompare(b[0]))
     .map(([month, value]) => ({month, value: Math.round(value * 100) / 100}));
@@ -213,6 +213,8 @@ if (typeof document !== 'undefined') {
 
   async function loadSample() {
     countryInput.value = 'GB'; countryInput.dispatchEvent(new Event('change', {bubbles: true}));
+    dateFormatInput.value = 'DMY';
+    numberFormatInput.value = 'dot';
     reset();
     setStatus('Loading fictional sample…');
     try {
@@ -244,8 +246,23 @@ if (typeof document !== 'undefined') {
       catch {throw new Error('Enter a supported three-letter currency code.');}
       currencyInput.value = currency;
       const indices = selects.map(select => select.value === '' ? null : Number(select.value));
-      summary = analyzeCsv(rows, {date:indices[0], order:indices[1], value:indices[2], customer:indices[3], product:indices[4], market:indices[5]},
-        {dateFormat: dateFormatInput.value, numberFormat: numberFormatInput.value});
+      const columns = {date:indices[0], order:indices[1], value:indices[2], customer:indices[3], product:indices[4], market:indices[5]};
+      const options = {dateFormat: dateFormatInput.value, numberFormat: numberFormatInput.value};
+      try { summary = analyzeCsv(rows, columns, options); }
+      catch (error) {
+        if (error.message.startsWith('No valid positive sales rows')) {
+          const alternate = options.numberFormat === 'dot' ? 'comma' : 'dot';
+          let alternateWorks = false;
+          try { analyzeCsv(rows, columns, {...options, numberFormat: alternate}); alternateWorks = true; }
+          catch { /* Keep the original validation error. */ }
+          if (alternateWorks) {
+            throw new Error(alternate === 'dot'
+              ? 'Your sales values look like 1,234.56. Choose that Amount format, then analyse again.'
+              : 'Your sales values look like 1.234,56. Choose that Amount format, then analyse again.');
+          }
+        }
+        throw error;
+      }
       document.getElementById('own-revenue').textContent = money(summary.revenue);
       document.getElementById('own-orders').textContent = number(summary.orders);
       document.getElementById('own-aov').textContent = money(summary.aov);
